@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 
 const features = [
   {
@@ -6,47 +6,76 @@ const features = [
     title: "Fine Dining",
     desc: "Award-winning restaurant on-site",
     image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80",
-    details: "Experience world-class cuisine crafted by our Michelin-starred chefs. Our restaurant offers an extensive menu featuring local and international dishes, paired with a curated wine selection.",
   },
   {
     icon: "💆",
     title: "Spa & Wellness",
     desc: "Rejuvenate your mind and body",
     image: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=800&q=80",
-    details: "Unwind in our luxurious spa featuring aromatherapy, hot stone massages, and holistic treatments. Our certified therapists ensure a relaxing and rejuvenating experience.",
   },
   {
     icon: "🏊",
     title: "Infinity Pool",
     desc: "Rooftop pool with panoramic views",
     image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80",
-    details: "Take a dip in our stunning rooftop infinity pool overlooking the city skyline. Open daily from 6AM to 10PM, with poolside bar service available.",
   },
   {
     icon: "🚗",
     title: "Valet Parking",
     desc: "Complimentary for all guests",
     image: "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&q=80",
-    details: "Enjoy hassle-free parking with our professional valet service. Complimentary for all hotel guests, available 24/7 at the main entrance.",
+  },
+  {
+    icon: "🏋️",
+    title: "Gym / Fitness Center",
+    desc: "State-of-the-art exercise facilities",
+    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&q=80",
+  },
+  {
+    icon: "🍸",
+    title: "Bar / Lounge",
+    desc: "Premium drinks and social area",
+    image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=800&q=80",
+  },
+  {
+    icon: "💼",
+    title: "Conference Room",
+    desc: "For meetings and seminars",
+    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80",
+  },
+  {
+    icon: "🎉",
+    title: "Function Hall",
+    desc: "For weddings, birthdays, and events",
+    image: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800&q=80",
   },
 ];
 
-export default function LandingPage({ navigate, onAdminClick }) {
-  const [selectedFeature, setSelectedFeature] = useState(null);
+export default function LandingPage({ navigate, onAdminClick, scrollToFeatures }) {
+
+  useEffect(() => {
+    if (scrollToFeatures) {
+      setTimeout(() => {
+        const el = document.getElementById("features");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    } else {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [scrollToFeatures]);
 
   return (
     <div style={styles.page}>
-      {/* Nav */}
       <nav style={styles.nav}>
         <div style={styles.logo}>GRAND<span style={styles.logoAccent}>VELOUR</span></div>
         <div style={styles.navLinks}>
           <button style={styles.navLink} onClick={() => navigate("about")}>About Us</button>
+          <button style={styles.navLink} onClick={() => navigate("floormap")}>Floor Map</button>
           <button style={styles.navLink} onClick={() => navigate("bookings")}>My Bookings</button>
           <button style={styles.navBtn} onClick={onAdminClick || (() => navigate("admin"))}>Admin</button>
         </div>
       </nav>
 
-      {/* Hero */}
       <section style={styles.hero}>
         <div style={styles.heroOverlay} />
         <div style={styles.heroContent}>
@@ -64,7 +93,6 @@ export default function LandingPage({ navigate, onAdminClick }) {
               Our Accommodations
             </button>
           </div>
-          {/* About Us CTA below main buttons */}
           <div style={styles.heroAboutWrap}>
             <button style={styles.heroAboutBtn} onClick={() => navigate("about")}>
               ✦ Discover Our Story ✦
@@ -73,10 +101,9 @@ export default function LandingPage({ navigate, onAdminClick }) {
         </div>
       </section>
 
-      {/* Features */}
-      <section style={styles.featuresSection}>
+      <section style={styles.featuresSection} id="features">
         {features.map((f, i) => (
-          <div key={i} style={styles.featureCard} onClick={() => setSelectedFeature(f)}>
+          <div key={i} style={styles.featureCard} onClick={() => navigate("feature", f)}>
             <div style={styles.featureImgWrap}>
               <img src={f.image} alt={f.title} style={styles.featureImg} />
               <div style={styles.featureImgOverlay} />
@@ -91,31 +118,9 @@ export default function LandingPage({ navigate, onAdminClick }) {
         ))}
       </section>
 
-      {/* Footer */}
       <footer style={styles.footer}>
         <p style={styles.footerText}>© 2024 Grand Velour Hotel. All rights reserved.</p>
       </footer>
-
-      {/* Modal */}
-      {selectedFeature && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedFeature(null)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <div style={styles.modalImgWrap}>
-              <img src={selectedFeature.image} alt={selectedFeature.title} style={styles.modalImg} />
-              <div style={styles.modalImgOverlay} />
-              <button style={styles.closeBtn} onClick={() => setSelectedFeature(null)}>✕</button>
-              <div style={styles.modalImgText}>
-                <span style={styles.modalIcon}>{selectedFeature.icon}</span>
-                <h2 style={styles.modalTitle}>{selectedFeature.title}</h2>
-              </div>
-            </div>
-            <div style={styles.modalBody}>
-              <p style={styles.modalDesc}>{selectedFeature.details}</p>
-              <button style={styles.modalBtn} onClick={() => navigate("book")}>Book Now</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -138,9 +143,9 @@ const styles = {
   heroBtn: { background: "#c9a96e", border: "none", color: "#0d0d0d", padding: "16px 40px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", cursor: "pointer", fontWeight: 500 },
   heroBtnOutline: { background: "transparent", border: "1px solid #c9a96e", color: "#c9a96e", padding: "16px 40px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", cursor: "pointer" },
   heroAboutWrap: { marginTop: "28px", display: "flex", justifyContent: "center" },
-  heroAboutBtn: { background: "none", border: "none", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #2a2520", transition: "color 0.2s" },
+  heroAboutBtn: { background: "none", border: "none", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #2a2520" },
   featuresSection: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderTop: "1px solid #1e1a16", marginTop: "80px" },
-  featureCard: { cursor: "pointer", overflow: "hidden", borderRight: "1px solid #1e1a16" },
+  featureCard: { cursor: "pointer", overflow: "hidden", borderRight: "1px solid #1e1a16", borderBottom: "1px solid #1e1a16" },
   featureImgWrap: { position: "relative", height: "200px", overflow: "hidden" },
   featureImg: { width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.4s" },
   featureImgOverlay: { position: "absolute", inset: 0, background: "rgba(13,13,13,0.45)" },
@@ -151,16 +156,4 @@ const styles = {
   featureLink: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#c9a96e", letterSpacing: "2px", textTransform: "uppercase" },
   footer: { padding: "40px 60px", textAlign: "center", borderTop: "1px solid #1e1a16" },
   footerText: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#4a3f32", letterSpacing: "2px" },
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 },
-  modal: { background: "#111", border: "1px solid #2a2520", width: "520px", overflow: "hidden" },
-  modalImgWrap: { position: "relative", height: "260px" },
-  modalImg: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
-  modalImgOverlay: { position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(13,13,13,0.9) 0%, rgba(13,13,13,0.2) 100%)" },
-  closeBtn: { position: "absolute", top: "16px", right: "16px", background: "rgba(0,0,0,0.5)", border: "1px solid #2a2520", color: "#e8dcc8", cursor: "pointer", width: "32px", height: "32px", fontSize: "14px" },
-  modalImgText: { position: "absolute", bottom: "20px", left: "32px" },
-  modalIcon: { fontSize: "28px", display: "block", marginBottom: "8px" },
-  modalTitle: { fontSize: "32px", fontWeight: 300, color: "#e8dcc8", margin: 0 },
-  modalBody: { padding: "28px 32px" },
-  modalDesc: { fontFamily: "'Jost', sans-serif", fontSize: "14px", color: "#8a7a68", lineHeight: 1.8, margin: "0 0 24px" },
-  modalBtn: { background: "#c9a96e", border: "none", color: "#0d0d0d", padding: "12px 32px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer", fontWeight: 500 },
 };
