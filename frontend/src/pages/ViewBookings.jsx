@@ -15,7 +15,14 @@ const statusStyle = {
 
 const roomTypeColor = { single: "#6a9fb5", double: "#7eb87e", suite: "#c9a96e", deluxe: "#c97b6e" };
 
-export default function ViewBookings({ navigate }) {
+const backLabel = (prev) => {
+  if (!prev || prev === "landing") return "← Back to Home";
+  if (prev === "book") return "← Back to Booking";
+  if (prev === "rooms") return "← Back to Accommodations";
+  return "← Back to Previous";
+};
+
+export default function ViewBookings({ navigate, goBack, previousPage }) {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [selected, setSelected] = useState(null);
@@ -33,7 +40,9 @@ export default function ViewBookings({ navigate }) {
   return (
     <div style={styles.page}>
       <nav style={styles.nav}>
-        <button style={styles.backBtn} onClick={() => navigate("landing")}>← Back to Home</button>
+        <button style={styles.backBtn} onClick={goBack ? goBack : () => navigate("landing")}>
+          {backLabel(previousPage)}
+        </button>
         <div style={styles.logo}>GRAND<span style={styles.logoAccent}>VELOUR</span></div>
         <button style={styles.bookBtn} onClick={() => navigate("book")}>+ New Booking</button>
       </nav>
@@ -162,7 +171,7 @@ export default function ViewBookings({ navigate }) {
 const styles = {
   page: { background: "#0d0d0d", minHeight: "100vh", color: "#e8dcc8", fontFamily: "'Cormorant Garamond', serif" },
   nav: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 60px", borderBottom: "1px solid #2a2520" },
-  backBtn: { background: "none", border: "none", color: "#a09080", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "13px" },
+  backBtn: { background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.2)", color: "#a09080", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "8px 16px" },
   logo: { fontSize: "20px", fontWeight: 600, letterSpacing: "6px" },
   logoAccent: { color: "#c9a96e" },
   bookBtn: { background: "#c9a96e", border: "none", color: "#0d0d0d", padding: "10px 24px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", cursor: "pointer", fontWeight: 500, textTransform: "uppercase" },
@@ -183,7 +192,7 @@ const styles = {
   table: { width: "100%", borderCollapse: "collapse" },
   thead: { background: "#111" },
   th: { fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#4a3f32", textTransform: "uppercase", padding: "16px 20px", textAlign: "left", borderBottom: "1px solid #1e1a16" },
-  tr: { borderBottom: "1px solid #1a1612", cursor: "pointer", transition: "background 0.2s" },
+  tr: { borderBottom: "1px solid #1a1612", cursor: "pointer" },
   td: { padding: "16px 20px", fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#8a7a68", verticalAlign: "middle" },
   guestName: { color: "#e8dcc8", fontFamily: "'Cormorant Garamond', serif", fontSize: "16px" },
   guestEmail: { fontSize: "12px", color: "#4a3f32", marginTop: "2px" },

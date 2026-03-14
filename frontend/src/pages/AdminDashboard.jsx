@@ -3,12 +3,21 @@ import { useState } from "react";
 const initHotels = [
   { id: 1, name: "Grand Velour Manila", address: "Ayala Ave, Makati", phone: "02-8123-4567", email: "manila@grandvelour.com" },
   { id: 2, name: "Grand Velour Cebu", address: "Colon St, Cebu City", phone: "032-234-5678", email: "cebu@grandvelour.com" },
+  { id: 3, name: "Grand Velour BGC", address: "9th Ave, Bonifacio Global City, Taguig", phone: "02-8765-4321", email: "bgc@grandvelour.com" },
+  { id: 4, name: "Grand Velour Iloilo", address: "Iznart St, Iloilo City", phone: "033-321-9876", email: "iloilo@grandvelour.com" },
+  { id: 5, name: "Grand Velour Cagayan de Oro", address: "Corrales Ave, Cagayan de Oro City", phone: "088-857-4321", email: "cdo@grandvelour.com" },
+  { id: 6, name: "Grand Velour Davao", address: "JP Laurel Ave, Davao City", phone: "082-224-5678", email: "davao@grandvelour.com" },
 ];
 const initRooms = [
   { id: 1, hotel: 1, room_number: "101", room_type: "single", price_per_night: 1800, is_available: true, capacity: 1, description: "Cozy single room" },
   { id: 2, hotel: 1, room_number: "201", room_type: "double", price_per_night: 2800, is_available: true, capacity: 2, description: "Spacious double room" },
   { id: 3, hotel: 1, room_number: "301", room_type: "suite", price_per_night: 6500, is_available: false, capacity: 3, description: "Luxurious suite" },
   { id: 4, hotel: 2, room_number: "101", room_type: "deluxe", price_per_night: 4500, is_available: true, capacity: 2, description: "Deluxe with sea view" },
+  { id: 5, hotel: 3, room_number: "101", room_type: "single", price_per_night: 2200, is_available: true, capacity: 1, description: "Modern single room in BGC" },
+  { id: 6, hotel: 3, room_number: "201", room_type: "double", price_per_night: 3500, is_available: true, capacity: 2, description: "Double room with skyline view" },
+  { id: 7, hotel: 4, room_number: "101", room_type: "single", price_per_night: 1500, is_available: true, capacity: 1, description: "Charming single room" },
+  { id: 8, hotel: 5, room_number: "101", room_type: "double", price_per_night: 2700, is_available: true, capacity: 2, description: "Double room near Cagayan River" },
+  { id: 9, hotel: 6, room_number: "101", room_type: "deluxe", price_per_night: 4800, is_available: true, capacity: 2, description: "Deluxe room with bay views" },
 ];
 const initClients = [
   { id: 1, name: "Maria Santos", email: "maria@email.com", phone: "09171234567", created_at: "2024-12-01" },
@@ -25,13 +34,13 @@ const TABS = ["Overview", "Hotels", "Rooms", "Clients", "Bookings"];
 const statusColor = { confirmed: "#7eb87e", cancelled: "#c97b6e", rescheduled: "#c9a96e" };
 const roomTypeColor = { single: "#6a9fb5", double: "#7eb87e", suite: "#c9a96e", deluxe: "#c97b6e" };
 
-export default function AdminDashboard({ navigate }) {
+export default function AdminDashboard({ navigate, onLogout }) {
   const [tab, setTab] = useState("Overview");
   const [hotels, setHotels] = useState(initHotels);
   const [rooms, setRooms] = useState(initRooms);
   const [clients, setClients] = useState(initClients);
   const [bookings, setBookings] = useState(initBookings);
-  const [modal, setModal] = useState(null); // { type, data }
+  const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
 
   const openAdd = (type) => { setModal({ type, mode: "add" }); setForm({}); };
@@ -86,6 +95,7 @@ export default function AdminDashboard({ navigate }) {
         </nav>
         <div style={styles.sidebarFooter}>
           <button style={styles.backBtn} onClick={() => navigate("landing")}>← Back to Site</button>
+          <button style={styles.logoutBtn} onClick={onLogout || (() => navigate("landing"))}>⏻ Logout</button>
         </div>
       </div>
 
@@ -363,7 +373,8 @@ const styles = {
   sidebarBtn: { background: "none", border: "none", color: "#6a5f52", cursor: "pointer", padding: "12px 24px", textAlign: "left", fontFamily: "'Jost',sans-serif", fontSize: "13px", letterSpacing: "1px" },
   sidebarActive: { color: "#c9a96e", background: "rgba(201,169,110,0.08)", borderLeft: "2px solid #c9a96e" },
   sidebarFooter: { padding: "24px" },
-  backBtn: { background: "none", border: "none", color: "#4a3f32", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "12px" },
+  backBtn: { background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.2)", color: "#a09080", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "7px 14px", width: "100%", textAlign: "left" },
+  logoutBtn: { background: "rgba(201,123,110,0.08)", border: "1px solid rgba(201,123,110,0.25)", color: "#c97b6e", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "1px", padding: "7px 14px", marginTop: "12px", width: "100%", textAlign: "left" },
   main: { flex: 1, padding: "48px 60px", overflowY: "auto" },
   pageTitle: { fontSize: "42px", fontWeight: 300, margin: "0 0 40px" },
   tabHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" },
@@ -375,7 +386,6 @@ const styles = {
   sectionTitle: { fontSize: "28px", fontWeight: 300, margin: "0 0 24px" },
   tableWrap: { border: "1px solid #1e1a16", overflow: "hidden" },
   table: { width: "100%", borderCollapse: "collapse" },
-  thead: {},
   th: { fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#4a3f32", textTransform: "uppercase", padding: "14px 20px", textAlign: "left", borderBottom: "1px solid #1e1a16", background: "#111" },
   tr: { borderBottom: "1px solid #1a1612" },
   td: { padding: "14px 20px", fontFamily: "'Jost',sans-serif", fontSize: "13px", color: "#8a7a68", verticalAlign: "middle" },
