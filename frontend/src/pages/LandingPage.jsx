@@ -31,7 +31,7 @@ const features = [
   },
 ];
 
-export default function LandingPage({ navigate }) {
+export default function LandingPage({ navigate, onAdminClick }) {
   const [selectedFeature, setSelectedFeature] = useState(null);
 
   return (
@@ -40,8 +40,9 @@ export default function LandingPage({ navigate }) {
       <nav style={styles.nav}>
         <div style={styles.logo}>GRAND<span style={styles.logoAccent}>VELOUR</span></div>
         <div style={styles.navLinks}>
+          <button style={styles.navLink} onClick={() => navigate("about")}>About Us</button>
           <button style={styles.navLink} onClick={() => navigate("bookings")}>My Bookings</button>
-          <button style={styles.navBtn} onClick={() => navigate("admin")}>Admin</button>
+          <button style={styles.navBtn} onClick={onAdminClick || (() => navigate("admin"))}>Admin</button>
         </div>
       </nav>
 
@@ -61,6 +62,12 @@ export default function LandingPage({ navigate }) {
             </button>
             <button style={styles.heroBtnOutline} onClick={() => navigate("rooms")}>
               Our Accommodations
+            </button>
+          </div>
+          {/* About Us CTA below main buttons */}
+          <div style={styles.heroAboutWrap}>
+            <button style={styles.heroAboutBtn} onClick={() => navigate("about")}>
+              ✦ Discover Our Story ✦
             </button>
           </div>
         </div>
@@ -121,7 +128,7 @@ const styles = {
   navLinks: { display: "flex", gap: "20px", alignItems: "center" },
   navLink: { background: "none", border: "none", color: "#a09080", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "13px", letterSpacing: "2px", textTransform: "uppercase" },
   navBtn: { background: "none", border: "1px solid #c9a96e", color: "#c9a96e", cursor: "pointer", padding: "8px 20px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase" },
-  hero: { position: "relative", height: "calc(100vh - 73px)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "linear-gradient(135deg, #0d0d0d 0%, #1a1510 50%, #0d0d0d 100%)", overflow: "hidden", paddingBottom: "80px" },
+  hero: { position: "relative", minHeight: "calc(100vh - 73px)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "linear-gradient(135deg, #0d0d0d 0%, #1a1510 50%, #0d0d0d 100%)", overflow: "hidden", paddingBottom: "80px" },
   heroOverlay: { position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 50%, rgba(201,169,110,0.08) 0%, transparent 60%)", pointerEvents: "none" },
   heroContent: { maxWidth: "620px", position: "relative", zIndex: 2, textAlign: "center", padding: "0 20px" },
   heroSub: { fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "5px", color: "#c9a96e", marginBottom: "20px" },
@@ -130,6 +137,8 @@ const styles = {
   heroBtns: { display: "flex", gap: "16px", justifyContent: "center" },
   heroBtn: { background: "#c9a96e", border: "none", color: "#0d0d0d", padding: "16px 40px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", cursor: "pointer", fontWeight: 500 },
   heroBtnOutline: { background: "transparent", border: "1px solid #c9a96e", color: "#c9a96e", padding: "16px 40px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", cursor: "pointer" },
+  heroAboutWrap: { marginTop: "28px", display: "flex", justifyContent: "center" },
+  heroAboutBtn: { background: "none", border: "none", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #2a2520", transition: "color 0.2s" },
   featuresSection: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderTop: "1px solid #1e1a16", marginTop: "80px" },
   featureCard: { cursor: "pointer", overflow: "hidden", borderRight: "1px solid #1e1a16" },
   featureImgWrap: { position: "relative", height: "200px", overflow: "hidden" },
