@@ -1,0 +1,98 @@
+from rest_framework import generics, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import Hotel, Room, Client, Booking
+from .serializers import HotelSerializer, RoomSerializer, ClientSerializer, BookingSerializer
+
+
+# --- Hotel ---
+class HotelListCreate(generics.ListCreateAPIView):
+    queryset = Hotel.objects.all()
+    serializer_class = HotelSerializer
+
+
+class HotelDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Hotel.objects.all()
+    serializer_class = HotelSerializer
+
+
+# --- Room ---
+class RoomListCreate(generics.ListCreateAPIView):
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer
+
+
+class RoomDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Room.objects.all()
+    serializer_class = RoomSerializer
+
+
+# --- Client ---
+class ClientListCreate(generics.ListCreateAPIView):
+    queryset = Client.objects.all()
+    serializer_class = ClientSerializer
+
+
+class ClientDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Client.objects.all()
+    serializer_class = ClientSerializer
+
+
+# --- Booking ---
+class BookingListCreate(generics.ListCreateAPIView):
+    queryset = Booking.objects.all()
+    serializer_class = BookingSerializer
+
+
+class BookingDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Booking.objects.all()
+    serializer_class = BookingSerializer
+
+
+# --- Cancel Booking ---
+class CancelBooking(APIView):
+    def patch(self, request, pk):
+        try:
+            booking = Booking.objects.get(pk=pk)
+            if booking.status == 'cancelled':
+                return Response(
+                    {'error': 'Booking is already cancelled.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            booking.status = 'cancelled'
+            booking.save()
+            return Response(
+                {'message': 'Booking cancelled successfully.'},
+                status=status.HTTP_200_OK
+            )
+        except Booking.DoesNotExist:
+            return Response(
+                {'error': 'Booking not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+# --- Reschedule Booking ---
+class RescheduleBooking(APIView):
+    def patch(self, request, pk):
+        try:
+            booking = Booking.objects.get(pk=pk)
+            if booking.status == 'cancelled':
+                return Response(
+                    {'error': 'Cannot reschedule a cancelled booking.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            serializer = BookingSerializer(
+                booking,
+                data=request.data,
+                partial=True
+            )
+            if serializer.is_valid():
+                serializer.save(status='rescheduled')
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Booking.DoesNotExist:
+            return Response(
+                {'error': 'Booking not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
