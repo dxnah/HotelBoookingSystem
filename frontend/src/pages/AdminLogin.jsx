@@ -1,9 +1,6 @@
 import { useState } from "react";
 
 // Hardcoded admin credentials (replace with real auth when backend is ready)
-const ADMIN_USERNAME = "admin";
-const ADMIN_PASSWORD = "admin";
-
 export default function AdminLogin({ onLoginSuccess, navigate }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -12,7 +9,7 @@ export default function AdminLogin({ onLoginSuccess, navigate }) {
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!username || !password) {
       setError("Please enter both username and password.");
       triggerShake();
@@ -21,17 +18,31 @@ export default function AdminLogin({ onLoginSuccess, navigate }) {
     setLoading(true);
     setError("");
 
-    // Simulate a brief auth check
-    setTimeout(() => {
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/v1/auth/token/login/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.auth_token) {
+        localStorage.setItem("authToken", data.auth_token);
         onLoginSuccess();
       } else {
-        setLoading(false);
         setError("Invalid credentials. Please try again.");
         triggerShake();
         setPassword("");
       }
-    }, 800);
+    } catch (err) {
+      setError("Cannot connect to server. Please try again.");
+      triggerShake();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const triggerShake = () => {
