@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { API_BASE } from "../api";
 
 // Load jsPDF dynamically
 function loadjsPDF() {
@@ -11,165 +12,37 @@ function loadjsPDF() {
   });
 }
 
-const mockHotels = [
-  { id: 1, name: "Grand Velour Manila", address: "Ayala Ave, Makati", phone: "02-8123-4567", email: "manila@grandvelour.com" },
-  { id: 2, name: "Grand Velour Cebu", address: "Colon St, Cebu City", phone: "032-234-5678", email: "cebu@grandvelour.com" },
-  { id: 3, name: "Grand Velour BGC", address: "9th Ave, Bonifacio Global City, Taguig", phone: "02-8765-4321", email: "bgc@grandvelour.com" },
-  { id: 4, name: "Grand Velour Iloilo", address: "Iznart St, Iloilo City", phone: "033-321-9876", email: "iloilo@grandvelour.com" },
-  { id: 5, name: "Grand Velour Cagayan de Oro", address: "Corrales Ave, Cagayan de Oro City", phone: "088-857-4321", email: "cdo@grandvelour.com" },
-  { id: 6, name: "Grand Velour Davao", address: "JP Laurel Ave, Davao City", phone: "082-224-5678", email: "davao@grandvelour.com" },
-];
-
-// 6 room types with cover photo + gallery images
-const ROOM_TYPE_INFO = {
-  classic: {
-    label: "Classic Room",
-    price: 2200,
-    capacity: 1,
-    size: "28 sqm",
-    description: "A cozy retreat with a queen bed, city view, and complimentary breakfast — perfect for solo travelers.",
-    cover: "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=80",
-      "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80",
-      "https://images.unsplash.com/photo-1595576508898-0ad5c879a061?w=600&q=80",
-    ],
-    color: "#6a9fb5",
-  },
-  superior_twin: {
-    label: "Superior Twin",
-    price: 3200,
-    capacity: 2,
-    size: "35 sqm",
-    description: "Two twin beds with a garden view — great for friends or colleagues traveling together.",
-    cover: "https://images.unsplash.com/photo-1595576508898-0ad5c879a061?w=800&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1595576508898-0ad5c879a061?w=600&q=80",
-      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600&q=80",
-      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=80",
-    ],
-    color: "#7eb87e",
-  },
-  deluxe: {
-    label: "Deluxe Suite",
-    price: 4500,
-    capacity: 2,
-    size: "45 sqm",
-    description: "King bed, sea view, and a private balcony — an elevated stay with premium amenities throughout.",
-    cover: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80",
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80",
-      "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80",
-    ],
-    color: "#c97b6e",
-  },
-  family: {
-    label: "Family Room",
-    price: 5500,
-    capacity: 4,
-    size: "55 sqm",
-    description: "Two queen beds with pool view and kids amenities — designed for families who want space and comfort.",
-    cover: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600&q=80",
-      "https://images.unsplash.com/photo-1595576508898-0ad5c879a061?w=600&q=80",
-      "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80",
-    ],
-    color: "#9b7ec8",
-  },
-  junior_suite: {
-    label: "Junior Suite",
-    price: 6800,
-    capacity: 2,
-    size: "65 sqm",
-    description: "King bed, separate living area, and exclusive rooftop access — perfect for romantic getaways.",
-    cover: "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80",
-      "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80",
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80",
-    ],
-    color: "#c9a96e",
-  },
-  presidential: {
-    label: "Presidential Suite",
-    price: 12000,
-    capacity: 4,
-    size: "120 sqm",
-    description: "Two bedrooms, grand living area, panoramic views, and 24/7 butler service — the pinnacle of luxury.",
-    cover: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80",
-    gallery: [
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80",
-      "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80",
-      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600&q=80",
-    ],
-    color: "#e8c87a",
-  },
+// ── Photo Carousel ────────────────────────────────────────────────────
+const ROOM_IMAGES = {
+  single: [
+    "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=80",
+    "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80",
+    "https://images.unsplash.com/photo-1595576508898-0ad5c879a061?w=600&q=80",
+  ],
+  double: [
+    "https://images.unsplash.com/photo-1595576508898-0ad5c879a061?w=600&q=80",
+    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600&q=80",
+    "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=80",
+  ],
+  deluxe: [
+    "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80",
+    "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80",
+    "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80",
+  ],
+  suite: [
+    "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80",
+    "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=600&q=80",
+    "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=600&q=80",
+  ],
 };
 
-const UNAVAIL_REASONS = ["Occupied", "On Maintenance", "Reserved", "Occupied", "On Maintenance"];
-
-// Different pattern per hotel+type so every card shows a unique available count
-const UNAVAIL_PATTERNS = [
-  [2],        // 4 available
-  [0, 3],     // 3 available
-  [1],        // 4 available
-  [2, 4],     // 3 available
-  [],         // 5 available — fully open
-  [0],        // 4 available
-  [1, 3],     // 3 available
-  [4],        // 4 available
-  [0, 2, 4],  // 2 available
-  [3],        // 4 available
-  [1, 4],     // 3 available
-  [0, 2],     // 3 available
-];
-
-function generateRooms() {
-  const rooms = [];
-  let id = 1;
-  const types = Object.keys(ROOM_TYPE_INFO);
-  mockHotels.forEach(hotel => {
-    types.forEach((type, typeIdx) => {
-      const info = ROOM_TYPE_INFO[type];
-      const pattern = UNAVAIL_PATTERNS[(hotel.id * 3 + typeIdx) % UNAVAIL_PATTERNS.length];
-      for (let i = 0; i < 5; i++) {
-        const roomNum = `${typeIdx + 1}0${i + 1}`;
-        const unavailable = pattern.includes(i);
-        rooms.push({
-          id: id++,
-          hotel: hotel.id,
-          room_number: roomNum,
-          room_type: type,
-          price_per_night: info.price,
-          is_available: !unavailable,
-          unavail_reason: unavailable ? UNAVAIL_REASONS[i] : null,
-          capacity: info.capacity,
-          description: info.description,
-          size: info.size,
-          gallery: info.gallery,
-        });
-      }
-    });
-  });
-  return rooms;
-}
-
-const mockRooms = generateRooms();
-
-// ── Photo Carousel ────────────────────────────────────────────────────
 function PhotoCarousel({ images, height = 160 }) {
   const [idx, setIdx] = useState(0);
   const prev = (e) => { e.stopPropagation(); setIdx(i => (i - 1 + images.length) % images.length); };
   const next = (e) => { e.stopPropagation(); setIdx(i => (i + 1) % images.length); };
   return (
     <div style={{ position: "relative", height, overflow: "hidden", background: "#0a0a0a", flexShrink: 0 }}>
-      <img
-        src={images[idx]}
-        alt=""
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-      />
+      <img src={images[idx]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       {images.length > 1 && (
         <>
           <button onClick={prev} style={carouselBtn("left")}>‹</button>
@@ -206,49 +79,159 @@ function QRCode({ value, size = 140 }) {
 // ── Main Component ────────────────────────────────────────────────────
 export default function BookAppointment({ navigate, goBack, previousPage }) {
   const [step, setStep] = useState(1);
+
+  // Real data from API
+  const [hotels, setHotels] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [dataError, setDataError] = useState(null);
+
+  // Selections
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [selectedRoomType, setSelectedRoomType] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
+
+  // Form
   const [form, setForm] = useState({ name: "", email: "", phone: "", guests: "", check_in: "", check_out: "", notes: "" });
+
+  // Submission
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [createdBooking, setCreatedBooking] = useState(null);
   const [bookingRefState] = useState(() => Math.random().toString(36).slice(2, 8).toUpperCase());
 
-  const typeInfo = selectedRoomType ? ROOM_TYPE_INFO[selectedRoomType] : null;
+  // ── Fetch hotels and rooms on mount ─────────────────────────────────
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoadingData(true);
+      try {
+        const [h, r] = await Promise.all([
+          fetch(`${API_BASE}/hotels/`).then(res => res.json()),
+          fetch(`${API_BASE}/rooms/`).then(res => res.json()),
+        ]);
+        setHotels(Array.isArray(h) ? h : []);
+        setRooms(Array.isArray(r) ? r : []);
+      } catch (err) {
+        setDataError("Could not load hotel data. Please try again.");
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // ── Derived data ─────────────────────────────────────────────────────
+  const roomsForHotel = selectedHotel
+    ? rooms.filter(r => r.hotel === selectedHotel.id)
+    : [];
+
+  const roomTypes = [...new Set(roomsForHotel.map(r => r.room_type))];
+
   const roomsOfType = selectedRoomType
-    ? mockRooms.filter(r => r.hotel === selectedHotel?.id && r.room_type === selectedRoomType)
+    ? roomsForHotel.filter(r => r.room_type === selectedRoomType)
     : [];
 
   const nights = form.check_in && form.check_out
     ? Math.max(0, (new Date(form.check_out) - new Date(form.check_in)) / (1000 * 60 * 60 * 24))
     : 0;
-  const totalPrice = selectedRoom ? selectedRoom.price_per_night * nights : 0;
+
+  const totalPrice = selectedRoom ? parseFloat(selectedRoom.price_per_night) * nights : 0;
   const bookingRef = `GV-${bookingRefState}`;
 
-  const qrData = `Grand Velour Booking | Ref: ${bookingRef} | Guest: ${form.name} | Hotel: ${selectedHotel?.name} | Room No: ${selectedRoom?.room_number} | Type: ${typeInfo?.label} | Guests: ${form.guests} | Check-in: ${form.check_in} | Check-out: ${form.check_out} | Total: PHP ${totalPrice.toLocaleString()}`;
+  const qrData = createdBooking
+    ? `Grand Velour Booking | Ref: ${bookingRef} | Guest: ${form.name} | Hotel: ${selectedHotel?.name} | Room: ${selectedRoom?.room_number} | Check-in: ${form.check_in} | Check-out: ${form.check_out} | Total: PHP ${totalPrice.toLocaleString()}`
+    : "";
 
+  // ── Submit booking ───────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Step 1: Create or find client
+      let clientId = null;
+
+      // Try to create client (if email exists, handle gracefully)
+      const clientRes = await fetch(`${API_BASE}/clients/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email || `guest_${bookingRefState}@grandvelour.com`,
+          phone: form.phone,
+        }),
+      });
+
+      if (clientRes.ok) {
+        const clientData = await clientRes.json();
+        clientId = clientData.id;
+      } else {
+        // Client might already exist — fetch by email
+        const allClients = await fetch(`${API_BASE}/clients/`).then(r => r.json());
+        const existing = allClients.find(c => c.email === form.email);
+        if (existing) {
+          clientId = existing.id;
+        } else {
+          setSubmitError("Could not create guest profile. Please try again.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // Step 2: Create booking
+      const bookingRes = await fetch(`${API_BASE}/bookings/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client: clientId,
+          room: selectedRoom.id,
+          check_in: form.check_in,
+          check_out: form.check_out,
+          status: "confirmed",
+          notes: form.notes,
+        }),
+      });
+
+      if (!bookingRes.ok) {
+        const errData = await bookingRes.json();
+        const msg = typeof errData === "object"
+          ? Object.values(errData).flat().join(" ")
+          : "Booking failed.";
+        setSubmitError(msg);
+        setSubmitting(false);
+        return;
+      }
+
+      const bookingData = await bookingRes.json();
+      setCreatedBooking(bookingData);
+      setSubmitted(true);
+    } catch (err) {
+      setSubmitError("Network error. Is the server running?");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ── PDF Receipt ──────────────────────────────────────────────────────
   const handleDownloadReceipt = async () => {
     const jsPDF = await loadjsPDF();
     const issueDate = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "legal" });
-    const W = doc.internal.pageSize.getWidth();   // 215.9mm
-    const H = doc.internal.pageSize.getHeight();  // 355.6mm
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
     let y = 0;
 
-    // ── Gold top bar ──────────────────────────────────
     doc.setFillColor(201, 169, 110);
     doc.rect(0, 0, W, 4, "F");
     y = 10;
 
-    // ── Header ───────────────────────────────────────
     doc.setFont("times", "bold");
     doc.setFontSize(22);
-    doc.setTextColor(26, 21, 16);
-    // "GRAND" normal color, "VELOUR" gold — approximate with two drawText calls
     const grandW = doc.getTextWidth("GRAND");
     const velourW = doc.getTextWidth("VELOUR");
-    const totalW = grandW + velourW;
-    const hx = (W - totalW) / 2;
+    const hx = (W - grandW - velourW) / 2;
     doc.setTextColor(26, 21, 16);
     doc.text("GRAND", hx, y + 8);
     doc.setTextColor(201, 169, 110);
@@ -271,13 +254,8 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.text("Official Booking Receipt", W / 2, y, { align: "center" });
     y += 8;
 
-    // ── Ref strip ─────────────────────────────────────
     doc.setFillColor(250, 247, 242);
     doc.rect(0, y, W, 16, "F");
-    doc.setDrawColor(224, 216, 204);
-    doc.line(0, y, W, y);
-    doc.line(0, y + 16, W, y + 16);
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(154, 138, 120);
@@ -286,20 +264,16 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setFontSize(16);
     doc.setTextColor(201, 169, 110);
     doc.text(bookingRef, 16, y + 13);
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(154, 138, 120);
     doc.text("DATE ISSUED", W - 16, y + 5, { align: "right" });
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(106, 95, 82);
     doc.text(issueDate, W - 16, y + 13, { align: "right" });
     y += 22;
 
-    // ── Helper: draw a section ─────────────────────────
     const drawSection = (title, rows) => {
-      // Section label
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(201, 169, 110);
@@ -307,7 +281,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
       doc.setDrawColor(240, 235, 227);
       doc.line(16, y + 2, W - 16, y + 2);
       y += 8;
-
       rows.forEach(([key, val]) => {
         if (!val && val !== 0) return;
         doc.setFont("helvetica", "normal");
@@ -320,7 +293,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         doc.text(String(val), W - 16, y, { align: "right" });
         y += 7;
       });
-
       doc.setDrawColor(224, 216, 204);
       doc.line(0, y + 2, W, y + 2);
       y += 8;
@@ -337,8 +309,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
       ["Hotel", selectedHotel?.name],
       ["Address", selectedHotel?.address],
       ["Room Number", `Room ${selectedRoom?.room_number}`],
-      ["Room Type", typeInfo?.label],
-      ["Room Size", selectedRoom?.size],
+      ["Room Type", selectedRoom?.room_type],
     ]);
 
     drawSection("STAY DETAILS", [
@@ -348,7 +319,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
       ...(form.notes ? [["Special Requests", form.notes]] : []),
     ]);
 
-    // Billing summary
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
     doc.setTextColor(201, 169, 110);
@@ -364,7 +334,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setFont("times", "normal");
     doc.setFontSize(10);
     doc.setTextColor(42, 32, 24);
-    doc.text(`PHP ${selectedRoom?.price_per_night.toLocaleString()}`, W - 16, y, { align: "right" });
+    doc.text(`PHP ${parseFloat(selectedRoom?.price_per_night).toLocaleString()}`, W - 16, y, { align: "right" });
     y += 7;
 
     doc.setFont("helvetica", "normal");
@@ -377,48 +347,28 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.text(String(nights), W - 16, y, { align: "right" });
     y += 5;
 
-    // Dashed line
     doc.setDrawColor(200, 190, 178);
     doc.setLineDashPattern([1, 2], 0);
     doc.line(16, y, W - 16, y);
     doc.setLineDashPattern([], 0);
     y += 8;
 
-    // ── Total box ─────────────────────────────────────
     doc.setFillColor(250, 247, 242);
     doc.rect(0, y, W, 20, "F");
     doc.setDrawColor(201, 169, 110);
     doc.setLineWidth(0.8);
     doc.line(0, y, W, y);
     doc.setLineWidth(0.2);
-
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(106, 95, 82);
     doc.text("TOTAL AMOUNT DUE", 16, y + 7);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(176, 160, 144);
-    doc.text(`PHP ${selectedRoom?.price_per_night.toLocaleString()} x ${nights} night${nights > 1 ? "s" : ""}`, 16, y + 13);
-
     doc.setFont("times", "normal");
     doc.setFontSize(26);
     doc.setTextColor(201, 169, 110);
     doc.text(`PHP ${totalPrice.toLocaleString()}`, W - 16, y + 14, { align: "right" });
     y += 26;
 
-    // ── Perforation dots ──────────────────────────────
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(200, 190, 178);
-    doc.text("· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·", W / 2, y, { align: "center" });
-    y += 8;
-
-    doc.setDrawColor(224, 216, 204);
-    doc.line(0, y, W, y);
-    y += 8;
-
-    // ── Footer ────────────────────────────────────────
     doc.setFont("times", "italic");
     doc.setFontSize(12);
     doc.setTextColor(106, 95, 82);
@@ -433,7 +383,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.text(selectedHotel?.address, W / 2, y, { align: "center" });
     y += 10;
 
-    // "Present receipt" stamp box
     const stampText = "PRESENT THIS RECEIPT UPON CHECK-IN";
     const stampW = doc.getTextWidth(stampText) + 16;
     doc.setDrawColor(201, 169, 110);
@@ -442,16 +391,27 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setFontSize(7.5);
     doc.setTextColor(201, 169, 110);
     doc.text(stampText, W / 2, y + 2.5, { align: "center" });
-    y += 14;
 
-    // ── Gold bottom bar ───────────────────────────────
     doc.setFillColor(201, 169, 110);
     doc.rect(0, H - 4, W, 4, "F");
 
     doc.save(`GrandVelour_Receipt_${bookingRef}.pdf`);
   };
 
-  // ── Success Screen ────────────────────────────────────────────────
+  // ── Loading state ────────────────────────────────────────────────────
+  if (loadingData) return (
+    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
+      LOADING...
+    </div>
+  );
+
+  if (dataError) return (
+    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c97b6e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "2px", textAlign: "center", padding: "40px" }}>
+      {dataError}
+    </div>
+  );
+
+  // ── Success Screen ────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div style={S.page}>
@@ -479,7 +439,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
                 {[
                   ["HOTEL", selectedHotel?.name],
                   ["ROOM NO.", `Room ${selectedRoom?.room_number}`],
-                  ["ROOM TYPE", typeInfo?.label],
+                  ["ROOM TYPE", selectedRoom?.room_type],
                   ["GUESTS", `${form.guests} person${Number(form.guests) > 1 ? "s" : ""}`],
                   ["CHECK-IN", form.check_in],
                   ["CHECK-OUT", form.check_out],
@@ -497,7 +457,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
               </div>
             </div>
             <div style={S.successActions}>
-              <button style={S.primaryBtn} onClick={handleDownloadReceipt}>🧾 View & Download Receipt</button>
+              <button style={S.primaryBtn} onClick={handleDownloadReceipt}>🧾 Download Receipt</button>
               <button style={S.outlineBtn} onClick={() => navigate("bookings")}>View My Bookings</button>
               <button style={S.ghostBtn} onClick={() => navigate("landing")}>Back to Home</button>
             </div>
@@ -509,9 +469,24 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
 
   return (
     <div style={S.page}>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>{`
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
+    cursor: pointer;
+    opacity: 0.8;
+  }
+  input[type="date"] {
+    color-scheme: dark;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
+  }
+`}</style>
       <nav style={S.nav}>
         <button style={S.backBtn} onClick={goBack}>
-          ← {previousPage === "landing" || !previousPage ? "Back to Home" : previousPage === "bookings" ? "Back to My Bookings" : previousPage === "rooms" ? "Back to Accommodations" : "Back to Previous Page"}
+          ← {previousPage === "landing" || !previousPage ? "Back to Home" : "Back"}
         </button>
         <div style={S.logo}>GRAND<span style={S.logoAccent}>VELOUR</span></div>
       </nav>
@@ -535,19 +510,23 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         {step === 1 && (
           <div style={S.stepContent}>
             <h2 style={S.stepTitle}>Select a Hotel</h2>
-            <div style={S.hotelGrid}>
-              {mockHotels.map(hotel => (
-                <div key={hotel.id}
-                  style={{ ...S.hotelCard, ...(selectedHotel?.id === hotel.id ? S.hotelSelected : {}) }}
-                  onClick={() => setSelectedHotel(hotel)}>
-                  <div style={S.hotelIcon}>🏨</div>
-                  <h3 style={S.hotelName}>{hotel.name}</h3>
-                  <p style={S.hotelAddr}>📍 {hotel.address}</p>
-                  <p style={S.hotelContact}>📞 {hotel.phone}</p>
-                  <p style={S.hotelContact}>✉️ {hotel.email}</p>
-                </div>
-              ))}
-            </div>
+            {hotels.length === 0 ? (
+              <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No hotels available. Please check back later.</p>
+            ) : (
+              <div style={S.hotelGrid}>
+                {hotels.map(hotel => (
+                  <div key={hotel.id}
+                    style={{ ...S.hotelCard, ...(selectedHotel?.id === hotel.id ? S.hotelSelected : {}) }}
+                    onClick={() => setSelectedHotel(hotel)}>
+                    <div style={S.hotelIcon}>🏨</div>
+                    <h3 style={S.hotelName}>{hotel.name}</h3>
+                    <p style={S.hotelAddr}>📍 {hotel.address}</p>
+                    <p style={S.hotelContact}>📞 {hotel.phone}</p>
+                    <p style={S.hotelContact}>✉️ {hotel.email}</p>
+                  </div>
+                ))}
+              </div>
+            )}
             <button style={{ ...S.primaryBtn, opacity: selectedHotel ? 1 : 0.4 }} disabled={!selectedHotel} onClick={() => setStep(2)}>
               Continue →
             </button>
@@ -557,44 +536,45 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         {/* ── STEP 2a: Room Type Selection ── */}
         {step === 2 && !selectedRoomType && (
           <div style={S.stepContent}>
-            <div>
-              <h2 style={S.stepTitle}>Choose a Room Type</h2>
-              <p style={S.stepSubtitle}>at {selectedHotel?.name}</p>
-            </div>
-            <div style={S.typeGrid}>
-              {Object.entries(ROOM_TYPE_INFO).map(([key, info]) => {
-                const availCount = mockRooms.filter(r => r.hotel === selectedHotel.id && r.room_type === key && r.is_available).length;
-                return (
-                  <div key={key} style={S.typeCard} onClick={() => setSelectedRoomType(key)}>
-                    <div style={S.typeCoverWrap}>
-                      <img src={info.cover} alt={info.label} style={S.typeCover} />
-                      <div style={S.typeCoverOverlay} />
-                      <span style={{ ...S.typeBadge, background: "rgba(13,13,13,0.88)", color: info.color, borderLeft: `3px solid ${info.color}` }}>
-                        {info.label}
-                      </span>
-                      <div style={S.typeAvailBubble}>
-                        <span style={{ color: availCount > 0 ? "#7eb87e" : "#c97b6e" }}>●</span>{" "}
-                        {availCount} of 5 available
+            <h2 style={S.stepTitle}>Choose a Room Type</h2>
+            <p style={S.stepSubtitle}>at {selectedHotel?.name}</p>
+            {roomTypes.length === 0 ? (
+              <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No rooms available for this hotel.</p>
+            ) : (
+              <div style={S.typeGrid}>
+                {roomTypes.map(type => {
+                  const roomsOfThisType = roomsForHotel.filter(r => r.room_type === type);
+                  const availCount = roomsOfThisType.filter(r => r.is_available).length;
+                  const sampleRoom = roomsOfThisType[0];
+                  const images = ROOM_IMAGES[type] || ROOM_IMAGES.single;
+                  return (
+                    <div key={type} style={S.typeCard} onClick={() => setSelectedRoomType(type)}>
+                      <div style={S.typeCoverWrap}>
+                        <img src={images[0]} alt={type} style={S.typeCover} />
+                        <div style={S.typeCoverOverlay} />
+                        <span style={{ ...S.typeBadge, color: "#c9a96e", borderLeft: "3px solid #c9a96e", background: "rgba(13,13,13,0.88)" }}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </span>
+                        <div style={S.typeAvailBubble}>
+                          <span style={{ color: availCount > 0 ? "#7eb87e" : "#c97b6e" }}>●</span>{" "}
+                          {availCount} available
+                        </div>
+                      </div>
+                      <div style={S.typeBody}>
+                        <div style={S.typeMetaRow}>
+                          <span style={S.typeMeta}>👥 Up to {sampleRoom?.capacity} guests</span>
+                        </div>
+                        <p style={S.typeDesc}>{sampleRoom?.description || "Comfortable room with premium amenities."}</p>
+                        <div style={S.typeFooter}>
+                          <span style={S.typePrice}>₱{parseFloat(sampleRoom?.price_per_night || 0).toLocaleString()}<span style={S.perNight}>/night</span></span>
+                          <span style={S.typeViewBtn}>View rooms →</span>
+                        </div>
                       </div>
                     </div>
-                    <div style={S.typeBody}>
-                      <div style={S.typeMetaRow}>
-                        <span style={S.typeMeta}>👥 Up to {info.capacity} guests</span>
-                        <span style={S.typeMeta}>📐 {info.size}</span>
-                      </div>
-                      <p style={S.typeDesc}>{info.description}</p>
-                      <div style={S.typeFooter}>
-                        <span style={S.typePrice}>₱{info.price.toLocaleString()}<span style={S.perNight}>/night</span></span>
-                        <span style={S.typeViewBtn}>View rooms →</span>
-                      </div>
-                      <div style={S.typeCta}>
-                        ✨ Is this the vibe you're looking for? Click to explore available rooms inside.
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
             <button style={S.outlineBtn} onClick={() => setStep(1)}>← Back</button>
           </div>
         )}
@@ -602,45 +582,33 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         {/* ── STEP 2b: Individual Rooms ── */}
         {step === 2 && selectedRoomType && (
           <div style={S.stepContent}>
-            <div>
-              <button style={{ background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.2)", color: "#a09080", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "8px 16px", marginBottom: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                onClick={() => { setSelectedRoomType(null); setSelectedRoom(null); }}>
-                ← Back to Room Types
-              </button>
-              <h2 style={S.stepTitle}>{typeInfo?.label}</h2>
-              <p style={S.stepSubtitle}>
-                {selectedHotel?.name} · {roomsOfType.filter(r => r.is_available).length} of {roomsOfType.length} rooms available
-              </p>
-            </div>
-
+            <button style={{ background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.2)", color: "#a09080", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "8px 16px", marginBottom: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              onClick={() => { setSelectedRoomType(null); setSelectedRoom(null); }}>
+              ← Back to Room Types
+            </button>
+            <h2 style={S.stepTitle}>{selectedRoomType.charAt(0).toUpperCase() + selectedRoomType.slice(1)} Rooms</h2>
+            <p style={S.stepSubtitle}>
+              {selectedHotel?.name} · {roomsOfType.filter(r => r.is_available).length} of {roomsOfType.length} available
+            </p>
             <div style={S.roomsGrid}>
               {roomsOfType.map(room => {
                 const isAvail = room.is_available;
                 const isSelected = selectedRoom?.id === room.id;
+                const images = ROOM_IMAGES[room.room_type] || ROOM_IMAGES.single;
                 return (
                   <div key={room.id}
-                    style={{
-                      ...S.roomCard,
-                      ...(isSelected ? S.roomSelected : {}),
-                      ...(isAvail ? {} : S.roomUnavailable),
-                      cursor: isAvail ? "pointer" : "not-allowed",
-                    }}
+                    style={{ ...S.roomCard, ...(isSelected ? S.roomSelected : {}), ...(isAvail ? {} : S.roomUnavailable), cursor: isAvail ? "pointer" : "not-allowed" }}
                     onClick={() => isAvail && setSelectedRoom(room)}>
-                    {/* Carousel */}
                     <div style={{ position: "relative" }}>
-                      <PhotoCarousel images={typeInfo.gallery} height={160} />
+                      <PhotoCarousel images={images} height={160} />
                       {!isAvail && (
                         <div style={S.unavailOverlay}>
                           <span style={{ fontSize: "22px" }}>🚫</span>
-                          <span style={S.unavailText}>Room Unavailable</span>
-                          <span style={S.unavailReason}>{room.unavail_reason}</span>
+                          <span style={S.unavailText}>Unavailable</span>
                         </div>
                       )}
-                      {isAvail && (
-                        <div style={S.vacantBadge}>● Vacant</div>
-                      )}
+                      {isAvail && <div style={S.vacantBadge}>● Vacant</div>}
                     </div>
-                    {/* Info */}
                     <div style={S.roomCardBody}>
                       <div style={S.roomCardTop}>
                         <span style={S.roomNumber}>Room {room.room_number}</span>
@@ -650,8 +618,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
                       </div>
                       <div style={S.roomCardMeta}>
                         <span>👥 Max {room.capacity}</span>
-                        <span>📐 {room.size}</span>
-                        <span style={{ color: "#c9a96e" }}>₱{room.price_per_night.toLocaleString()}/night</span>
+                        <span style={{ color: "#c9a96e" }}>₱{parseFloat(room.price_per_night).toLocaleString()}/night</span>
                       </div>
                       {isAvail && (
                         <div style={{ ...S.selectRoomBtn, ...(isSelected ? S.selectRoomBtnActive : {}) }}>
@@ -663,7 +630,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
                 );
               })}
             </div>
-
             <div style={{ display: "flex", gap: "12px" }}>
               <button style={S.outlineBtn} onClick={() => { setSelectedRoomType(null); setSelectedRoom(null); }}>← Back</button>
               <button style={{ ...S.primaryBtn, opacity: selectedRoom ? 1 : 0.4 }} disabled={!selectedRoom} onClick={() => setStep(3)}>
@@ -697,7 +663,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
                 <label style={S.label}>Number of Guests</label>
                 <input type="number" placeholder={`1–${selectedRoom?.capacity}`} min="1" max={selectedRoom?.capacity}
                   value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })} style={S.input} />
-                <p style={S.inputHint}>For safety compliance · Room capacity: {selectedRoom?.capacity} person{selectedRoom?.capacity > 1 ? "s" : ""}</p>
+                <p style={S.inputHint}>Room capacity: {selectedRoom?.capacity} person{selectedRoom?.capacity > 1 ? "s" : ""}</p>
               </div>
               <div>
                 <label style={S.label}>Check-in Date</label>
@@ -720,7 +686,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
             </div>
             {nights > 0 && (
               <div style={S.priceSummary}>
-                <span>₱{selectedRoom?.price_per_night.toLocaleString()} × {nights} night{nights > 1 ? "s" : ""}</span>
+                <span>₱{parseFloat(selectedRoom?.price_per_night).toLocaleString()} × {nights} night{nights > 1 ? "s" : ""}</span>
                 <span style={{ color: "#c9a96e", fontSize: "20px" }}>₱{totalPrice.toLocaleString()}</span>
               </div>
             )}
@@ -743,7 +709,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
             <div style={S.confirmCard}>
               {[
                 { label: "HOTEL", value: selectedHotel?.name, sub: selectedHotel?.address },
-                { label: "ROOM TYPE", value: typeInfo?.label, sub: `${selectedRoom?.size} · Up to ${selectedRoom?.capacity} guests` },
+                { label: "ROOM TYPE", value: selectedRoomType?.charAt(0).toUpperCase() + selectedRoomType?.slice(1) },
                 { label: "ROOM NUMBER", value: `Room ${selectedRoom?.room_number}` },
                 { label: "GUEST", value: form.name, sub: `${form.email ? form.email + " · " : ""}${form.phone}` },
                 { label: "NUMBER OF GUESTS", value: `${form.guests} person${Number(form.guests) > 1 ? "s" : ""}` },
@@ -761,9 +727,18 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
                 </div>
               ))}
             </div>
+
+            {submitError && (
+              <div style={{ background: "rgba(201,123,110,0.1)", border: "1px solid rgba(201,123,110,0.3)", color: "#c97b6e", fontFamily: "'Jost',sans-serif", fontSize: "13px", padding: "12px 16px" }}>
+                ⚠ {submitError}
+              </div>
+            )}
+
             <div style={{ display: "flex", gap: "12px" }}>
-              <button style={S.outlineBtn} onClick={() => setStep(3)}>← Back</button>
-              <button style={S.primaryBtn} onClick={() => setSubmitted(true)}>Confirm Booking ✓</button>
+              <button style={S.outlineBtn} onClick={() => setStep(3)} disabled={submitting}>← Back</button>
+              <button style={{ ...S.primaryBtn, opacity: submitting ? 0.6 : 1 }} onClick={handleSubmit} disabled={submitting}>
+                {submitting ? "Confirming..." : "Confirm Booking ✓"}
+              </button>
             </div>
           </div>
         )}
@@ -807,18 +782,16 @@ const S = {
   typeMetaRow: { display: "flex", gap: "16px", marginBottom: "10px" },
   typeMeta: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#4a3f32" },
   typeDesc: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#6a5f52", lineHeight: 1.65, margin: "0 0 12px" },
-  typeFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" },
+  typeFooter: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   typePrice: { fontSize: "20px", fontWeight: 300, color: "#c9a96e" },
   perNight: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#6a5f52" },
   typeViewBtn: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#c9a96e", letterSpacing: "1px" },
-  typeCta: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#4a3f32", fontStyle: "italic", borderTop: "1px solid #1e1a16", paddingTop: "10px", lineHeight: 1.6 },
   roomsGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" },
   roomCard: { border: "1px solid #1e1a16", background: "#111", overflow: "hidden" },
   roomSelected: { border: "1px solid #c9a96e", background: "rgba(201,169,110,0.04)" },
   roomUnavailable: { opacity: 0.52, filter: "grayscale(55%)" },
   unavailOverlay: { position: "absolute", inset: 0, background: "rgba(13,13,13,0.78)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px" },
   unavailText: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#c97b6e", letterSpacing: "1px", textTransform: "uppercase" },
-  unavailReason: { fontFamily: "'Jost', sans-serif", fontSize: "10px", color: "#8a6a62", letterSpacing: "1px" },
   vacantBadge: { position: "absolute", bottom: "8px", right: "8px", background: "rgba(13,13,13,0.8)", color: "#7eb87e", fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "2px", padding: "3px 10px", textTransform: "uppercase" },
   roomCardBody: { padding: "14px 18px" },
   roomCardTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" },

@@ -1,11 +1,5 @@
-import { useState } from "react";
-
-const mockBookings = [
-  { id: 1, client: { name: "Maria Santos", email: "maria@email.com", phone: "09171234567" }, room: { room_number: "201", room_type: "double", hotel: { name: "Grand Velour Manila" } }, check_in: "2024-12-20", check_out: "2024-12-23", status: "confirmed", total_price: 8400, notes: "Early check-in requested" },
-  { id: 2, client: { name: "Jose Reyes", email: "jose@email.com", phone: "09281234567" }, room: { room_number: "301", room_type: "suite", hotel: { name: "Grand Velour Manila" } }, check_in: "2024-12-25", check_out: "2024-12-28", status: "confirmed", total_price: 19500, notes: "" },
-  { id: 3, client: { name: "Ana Cruz", email: "ana@email.com", phone: "09391234567" }, room: { room_number: "101", room_type: "single", hotel: { name: "Grand Velour Cebu" } }, check_in: "2024-12-15", check_out: "2024-12-17", status: "cancelled", total_price: 3200, notes: "Cancelled due to emergency" },
-  { id: 4, client: { name: "Maria Santos", email: "maria@email.com", phone: "09171234567" }, room: { room_number: "401", room_type: "deluxe", hotel: { name: "Grand Velour Manila" } }, check_in: "2025-01-05", check_out: "2025-01-08", status: "rescheduled", total_price: 13500, notes: "Moved from Dec 28" },
-];
+import { useState, useEffect } from "react";
+import { API_BASE } from "../api";
 
 const statusStyle = {
   confirmed: { color: "#7eb87e", bg: "rgba(126,184,126,0.1)", border: "rgba(126,184,126,0.3)" },
@@ -23,22 +17,64 @@ const backLabel = (prev) => {
 };
 
 export default function ViewBookings({ navigate, goBack, previousPage }) {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [selected, setSelected] = useState(null);
 
-  const filtered = mockBookings.filter(b => {
-    const matchSearch = b.client.name.toLowerCase().includes(search.toLowerCase()) ||
-      b.client.email.toLowerCase().includes(search.toLowerCase()) ||
-      b.room.room_number.includes(search);
+  // ── Fetch bookings from API ──────────────────────────────
+  useEffect(() => {
+    const fetchBookings = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE}/bookings/`);
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        setBookings(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setError("Could not load bookings. Is the Django server running?");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, []);
+
+  const filtered = bookings.filter(b => {
+    const clientName = (b.client_name || "").toLowerCase();
+    const roomNum = String(b.room_number || "");
+    const hotelName = (b.hotel_name || "").toLowerCase();
+    const matchSearch =
+      clientName.includes(search.toLowerCase()) ||
+      roomNum.includes(search) ||
+      hotelName.includes(search.toLowerCase());
     const matchStatus = filterStatus === "all" || b.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
-  const nights = (b) => Math.max(0, (new Date(b.check_out) - new Date(b.check_in)) / (1000 * 60 * 60 * 24));
+  const nights = (b) =>
+    Math.max(0, (new Date(b.check_out) - new Date(b.check_in)) / (1000 * 60 * 60 * 24));
+
+  // ── Loading / Error ──────────────────────────────────────
+  if (loading) return (
+    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
+      LOADING...
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c97b6e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "2px", textAlign: "center", padding: "40px" }}>
+      {error}
+    </div>
+  );
 
   return (
     <div style={styles.page}>
+      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+
       <nav style={styles.nav}>
         <button style={styles.backBtn} onClick={goBack ? goBack : () => navigate("landing")}>
           {backLabel(previousPage)}
@@ -56,7 +92,9 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
           <div style={styles.stats}>
             {["confirmed", "rescheduled", "cancelled"].map(s => (
               <div key={s} style={styles.statBox}>
-                <span style={{ ...styles.statNum, color: statusStyle[s].color }}>{mockBookings.filter(b => b.status === s).length}</span>
+                <span style={{ ...styles.statNum, color: statusStyle[s].color }}>
+                  {bookings.filter(b => b.status === s).length}
+                </span>
                 <span style={styles.statLabel}>{s}</span>
               </div>
             ))}
@@ -67,7 +105,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
         <div style={styles.filters}>
           <input
             type="text"
-            placeholder="Search by name, email, or room..."
+            placeholder="Search by name, hotel, or room..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={styles.searchInput}
@@ -97,26 +135,42 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={9} style={{ ...styles.td, textAlign: "center", color: "#4a3f32", padding: "48px" }}>No bookings found.</td></tr>
+                <tr>
+                  <td colSpan={9} style={{ ...styles.td, textAlign: "center", color: "#4a3f32", padding: "48px" }}>
+                    {bookings.length === 0 ? "No bookings yet." : "No bookings match your search."}
+                  </td>
+                </tr>
               ) : filtered.map(b => (
                 <tr key={b.id} style={styles.tr} onClick={() => setSelected(b)}>
                   <td style={styles.td}>#{b.id}</td>
                   <td style={styles.td}>
-                    <div style={styles.guestName}>{b.client.name}</div>
-                    <div style={styles.guestEmail}>{b.client.email}</div>
+                    <div style={styles.guestName}>{b.client_name || "—"}</div>
                   </td>
-                  <td style={styles.td}><span style={styles.hotelName}>{b.room.hotel.name}</span></td>
                   <td style={styles.td}>
-                    <span style={{ ...styles.roomBadge, color: roomTypeColor[b.room.room_type], background: roomTypeColor[b.room.room_type] + "15" }}>
-                      {b.room.room_number} · {b.room.room_type}
+                    <span style={styles.hotelName}>{b.hotel_name || "—"}</span>
+                  </td>
+                  <td style={styles.td}>
+                    <span style={{
+                      ...styles.roomBadge,
+                      color: roomTypeColor[b.room_type] || "#8a7a68",
+                      background: (roomTypeColor[b.room_type] || "#8a7a68") + "15"
+                    }}>
+                      {b.room_number ? `Room ${b.room_number}` : "—"}
                     </span>
                   </td>
                   <td style={styles.td}>{b.check_in}</td>
                   <td style={styles.td}>{b.check_out}</td>
                   <td style={styles.td}>{nights(b)}n</td>
-                  <td style={{ ...styles.td, color: "#c9a96e" }}>₱{b.total_price.toLocaleString()}</td>
+                  <td style={{ ...styles.td, color: "#c9a96e" }}>
+                    ₱{parseFloat(b.total_price || 0).toLocaleString()}
+                  </td>
                   <td style={styles.td}>
-                    <span style={{ ...styles.statusBadge, color: statusStyle[b.status].color, background: statusStyle[b.status].bg, border: `1px solid ${statusStyle[b.status].border}` }}>
+                    <span style={{
+                      ...styles.statusBadge,
+                      color: statusStyle[b.status]?.color || "#8a7a68",
+                      background: statusStyle[b.status]?.bg || "transparent",
+                      border: `1px solid ${statusStyle[b.status]?.border || "#2a2520"}`
+                    }}>
                       {b.status}
                     </span>
                   </td>
@@ -137,29 +191,84 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
             </div>
             <div style={styles.modalBody}>
               {[
-                { label: "GUEST", value: selected.client.name, sub: `${selected.client.email} · ${selected.client.phone}` },
-                { label: "HOTEL", value: selected.room.hotel.name },
-                { label: "ROOM", value: `Room ${selected.room.room_number}`, sub: selected.room.room_type },
+                { label: "GUEST", value: selected.client_name, sub: null },
+                { label: "HOTEL", value: selected.hotel_name },
+                { label: "ROOM", value: selected.room_number ? `Room ${selected.room_number}` : "—" },
                 { label: "CHECK-IN", value: selected.check_in },
                 { label: "CHECK-OUT", value: selected.check_out },
                 { label: "DURATION", value: `${nights(selected)} night${nights(selected) > 1 ? "s" : ""}` },
-                { label: "TOTAL PRICE", value: `₱${selected.total_price.toLocaleString()}`, highlight: true },
+                { label: "TOTAL PRICE", value: `₱${parseFloat(selected.total_price || 0).toLocaleString()}`, highlight: true },
                 ...(selected.notes ? [{ label: "NOTES", value: selected.notes }] : []),
               ].map((row, i) => (
                 <div key={i} style={styles.modalRow}>
                   <span style={styles.modalLabel}>{row.label}</span>
                   <div>
-                    <span style={{ ...styles.modalValue, ...(row.highlight ? { color: "#c9a96e", fontSize: "22px" } : {}) }}>{row.value}</span>
-                    {row.sub && <div style={styles.modalSub}>{row.sub}</div>}
+                    <span style={{
+                      ...styles.modalValue,
+                      ...(row.highlight ? { color: "#c9a96e", fontSize: "22px" } : {})
+                    }}>
+                      {row.value}
+                    </span>
                   </div>
                 </div>
               ))}
               <div style={styles.modalRow}>
                 <span style={styles.modalLabel}>STATUS</span>
-                <span style={{ ...styles.statusBadge, color: statusStyle[selected.status].color, background: statusStyle[selected.status].bg, border: `1px solid ${statusStyle[selected.status].border}` }}>
+                <span style={{
+                  ...styles.statusBadge,
+                  color: statusStyle[selected.status]?.color,
+                  background: statusStyle[selected.status]?.bg,
+                  border: `1px solid ${statusStyle[selected.status]?.border}`
+                }}>
                   {selected.status}
                 </span>
               </div>
+
+              {/* Cancel & Reschedule — only for confirmed bookings */}
+              {selected.status === "confirmed" && (
+                <div style={{ padding: "20px 32px", display: "flex", gap: "12px", borderTop: "1px solid #1e1a16" }}>
+                  <button
+                    style={{ flex: 1, background: "rgba(201,123,110,0.1)", border: "1px solid rgba(201,123,110,0.3)", color: "#c97b6e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
+                    onClick={async () => {
+                      if (!window.confirm("Cancel this booking?")) return;
+                      const res = await fetch(`${API_BASE}/bookings/${selected.id}/cancel/`, { method: "PATCH" });
+                      if (res.ok) {
+                        setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, status: "cancelled" } : b));
+                        setSelected(prev => ({ ...prev, status: "cancelled" }));
+                      } else {
+                        alert("Could not cancel booking.");
+                      }
+                    }}
+                  >
+                    Cancel Booking
+                  </button>
+
+                  <button
+                    style={{ flex: 1, background: "rgba(201,169,110,0.1)", border: "1px solid rgba(201,169,110,0.3)", color: "#c9a96e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
+                    onClick={async () => {
+                      const newCheckIn = window.prompt("New check-in date (YYYY-MM-DD):", selected.check_in);
+                      if (!newCheckIn) return;
+                      const newCheckOut = window.prompt("New check-out date (YYYY-MM-DD):", selected.check_out);
+                      if (!newCheckOut) return;
+                      const res = await fetch(`${API_BASE}/bookings/${selected.id}/reschedule/`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ check_in: newCheckIn, check_out: newCheckOut }),
+                      });
+                      if (res.ok) {
+                        const updated = await res.json();
+                        setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, ...updated } : b));
+                        setSelected(prev => ({ ...prev, ...updated }));
+                      } else {
+                        const err = await res.json();
+                        alert("Error: " + JSON.stringify(err));
+                      }
+                    }}
+                  >
+                    Reschedule
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -195,7 +304,6 @@ const styles = {
   tr: { borderBottom: "1px solid #1a1612", cursor: "pointer" },
   td: { padding: "16px 20px", fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#8a7a68", verticalAlign: "middle" },
   guestName: { color: "#e8dcc8", fontFamily: "'Cormorant Garamond', serif", fontSize: "16px" },
-  guestEmail: { fontSize: "12px", color: "#4a3f32", marginTop: "2px" },
   hotelName: { fontSize: "13px" },
   roomBadge: { padding: "4px 10px", fontSize: "11px", letterSpacing: "1px", textTransform: "uppercase" },
   statusBadge: { padding: "4px 12px", fontSize: "11px", letterSpacing: "1px", textTransform: "uppercase", display: "inline-block" },
@@ -208,5 +316,4 @@ const styles = {
   modalRow: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "16px 32px", borderBottom: "1px solid #1a1612" },
   modalLabel: { fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#c9a96e", textTransform: "uppercase", paddingTop: "4px" },
   modalValue: { fontSize: "18px", fontWeight: 400, color: "#e8dcc8", display: "block" },
-  modalSub: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#6a5f52", marginTop: "2px" },
 };

@@ -1,82 +1,158 @@
-import { useState } from "react";
-
-const initHotels = [
-  { id: 1, name: "Grand Velour Manila", address: "Ayala Ave, Makati", phone: "02-8123-4567", email: "manila@grandvelour.com" },
-  { id: 2, name: "Grand Velour Cebu", address: "Colon St, Cebu City", phone: "032-234-5678", email: "cebu@grandvelour.com" },
-  { id: 3, name: "Grand Velour BGC", address: "9th Ave, Bonifacio Global City, Taguig", phone: "02-8765-4321", email: "bgc@grandvelour.com" },
-  { id: 4, name: "Grand Velour Iloilo", address: "Iznart St, Iloilo City", phone: "033-321-9876", email: "iloilo@grandvelour.com" },
-  { id: 5, name: "Grand Velour Cagayan de Oro", address: "Corrales Ave, Cagayan de Oro City", phone: "088-857-4321", email: "cdo@grandvelour.com" },
-  { id: 6, name: "Grand Velour Davao", address: "JP Laurel Ave, Davao City", phone: "082-224-5678", email: "davao@grandvelour.com" },
-];
-const initRooms = [
-  { id: 1, hotel: 1, room_number: "101", room_type: "single", price_per_night: 1800, is_available: true, capacity: 1, description: "Cozy single room" },
-  { id: 2, hotel: 1, room_number: "201", room_type: "double", price_per_night: 2800, is_available: true, capacity: 2, description: "Spacious double room" },
-  { id: 3, hotel: 1, room_number: "301", room_type: "suite", price_per_night: 6500, is_available: false, capacity: 3, description: "Luxurious suite" },
-  { id: 4, hotel: 2, room_number: "101", room_type: "deluxe", price_per_night: 4500, is_available: true, capacity: 2, description: "Deluxe with sea view" },
-  { id: 5, hotel: 3, room_number: "101", room_type: "single", price_per_night: 2200, is_available: true, capacity: 1, description: "Modern single room in BGC" },
-  { id: 6, hotel: 3, room_number: "201", room_type: "double", price_per_night: 3500, is_available: true, capacity: 2, description: "Double room with skyline view" },
-  { id: 7, hotel: 4, room_number: "101", room_type: "single", price_per_night: 1500, is_available: true, capacity: 1, description: "Charming single room" },
-  { id: 8, hotel: 5, room_number: "101", room_type: "double", price_per_night: 2700, is_available: true, capacity: 2, description: "Double room near Cagayan River" },
-  { id: 9, hotel: 6, room_number: "101", room_type: "deluxe", price_per_night: 4800, is_available: true, capacity: 2, description: "Deluxe room with bay views" },
-];
-const initClients = [
-  { id: 1, name: "Maria Santos", email: "maria@email.com", phone: "09171234567", created_at: "2024-12-01" },
-  { id: 2, name: "Jose Reyes", email: "jose@email.com", phone: "09281234567", created_at: "2024-12-05" },
-  { id: 3, name: "Ana Cruz", email: "ana@email.com", phone: "09391234567", created_at: "2024-12-10" },
-];
-const initBookings = [
-  { id: 1, client_id: 1, room_id: 2, check_in: "2024-12-20", check_out: "2024-12-23", status: "confirmed", total_price: 8400, notes: "Early check-in" },
-  { id: 2, client_id: 2, room_id: 3, check_in: "2024-12-25", check_out: "2024-12-28", status: "confirmed", total_price: 19500, notes: "" },
-  { id: 3, client_id: 3, room_id: 1, check_in: "2024-12-15", check_out: "2024-12-17", status: "cancelled", total_price: 3200, notes: "" },
-];
+import { useState, useEffect, useCallback } from "react";
+import { API_BASE } from "../api";
+import { styles } from "../styles/AdminDashboard.js";
 
 const TABS = ["Overview", "Hotels", "Rooms", "Clients", "Bookings"];
 const statusColor = { confirmed: "#7eb87e", cancelled: "#c97b6e", rescheduled: "#c9a96e" };
 const roomTypeColor = { single: "#6a9fb5", double: "#7eb87e", suite: "#c9a96e", deluxe: "#c97b6e" };
 
 export default function AdminDashboard({ navigate, onLogout }) {
-  const [tab, setTab] = useState("Overview");
-  const [hotels, setHotels] = useState(initHotels);
-  const [rooms, setRooms] = useState(initRooms);
-  const [clients, setClients] = useState(initClients);
-  const [bookings, setBookings] = useState(initBookings);
+  const [tab, setTab] = useState("");
+  const [hotels, setHotels] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({});
+
+  const token = localStorage.getItem("authToken");
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Token ${token}` }),
+  };
+
+  // ── Fetch all data ───────────────────────────────────────
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [h, r, c, b] = await Promise.all([
+        fetch(`${API_BASE}/hotels/`, { headers }).then(res => res.json()),
+        fetch(`${API_BASE}/rooms/`, { headers }).then(res => res.json()),
+        fetch(`${API_BASE}/clients/`, { headers }).then(res => res.json()),
+        fetch(`${API_BASE}/bookings/`, { headers }).then(res => res.json()),
+      ]);
+      setHotels(Array.isArray(h) ? h : []);
+      setRooms(Array.isArray(r) ? r : []);
+      setClients(Array.isArray(c) ? c : []);
+      setBookings(Array.isArray(b) ? b : []);
+    } catch (err) {
+      setError("Failed to load data. Is the Django server running?");
+    } finally {
+      setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   const openAdd = (type) => { setModal({ type, mode: "add" }); setForm({}); };
   const openEdit = (type, data) => { setModal({ type, mode: "edit" }); setForm({ ...data }); };
   const closeModal = () => { setModal(null); setForm({}); };
 
-  const save = () => {
-    if (modal.type === "hotel") {
-      if (modal.mode === "add") setHotels([...hotels, { ...form, id: Date.now() }]);
-      else setHotels(hotels.map(h => h.id === form.id ? form : h));
+  // ── Save (Create or Update) ──────────────────────────────
+  const save = async () => {
+    const { type, mode } = modal;
+    const isEdit = mode === "edit";
+
+    const endpoints = {
+      hotel: `${API_BASE}/hotels/`,
+      room: `${API_BASE}/rooms/`,
+      client: `${API_BASE}/clients/`,
+      booking: `${API_BASE}/bookings/`,
+    };
+
+    const url = isEdit ? `${endpoints[type]}${form.id}/` : endpoints[type];
+    const method = isEdit ? "PUT" : "POST";
+
+    const payload = { ...form };
+    delete payload.hotel_name;
+    delete payload.client_name;
+
+    if (type === "room") {
+      payload.hotel = parseInt(payload.hotel);
+      payload.price_per_night = parseFloat(payload.price_per_night);
+      payload.capacity = parseInt(payload.capacity);
+      payload.is_available = payload.is_available === "true" || payload.is_available === true;
     }
-    if (modal.type === "room") {
-      if (modal.mode === "add") setRooms([...rooms, { ...form, id: Date.now(), hotel: parseInt(form.hotel), price_per_night: parseFloat(form.price_per_night), capacity: parseInt(form.capacity), is_available: form.is_available === "true" || form.is_available === true }]);
-      else setRooms(rooms.map(r => r.id === form.id ? { ...form, hotel: parseInt(form.hotel), price_per_night: parseFloat(form.price_per_night), capacity: parseInt(form.capacity), is_available: form.is_available === "true" || form.is_available === true } : r));
+
+    if (type === "booking") {
+      payload.room = parseInt(payload.room);
+      payload.client = parseInt(payload.client);
+      delete payload.room_number;
+      delete payload.total_price;
+      delete payload.created_at;
+      delete payload.updated_at;
     }
-    if (modal.type === "client") {
-      if (modal.mode === "add") setClients([...clients, { ...form, id: Date.now(), created_at: new Date().toISOString().split("T")[0] }]);
-      else setClients(clients.map(c => c.id === form.id ? form : c));
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        alert("Error: " + JSON.stringify(errData));
+        return;
+      }
+
+      await fetchAll();
+      closeModal();
+    } catch (err) {
+      alert("Network error. Is Django running?");
     }
-    if (modal.type === "booking") {
-      if (modal.mode === "edit") setBookings(bookings.map(b => b.id === form.id ? { ...form, client_id: parseInt(form.client_id), room_id: parseInt(form.room_id) } : b));
-    }
-    closeModal();
   };
 
-  const del = (type, id) => {
+  // ── Delete ───────────────────────────────────────────────
+  const del = async (type, id) => {
     if (!window.confirm("Delete this record?")) return;
-    if (type === "hotel") setHotels(hotels.filter(h => h.id !== id));
-    if (type === "room") setRooms(rooms.filter(r => r.id !== id));
-    if (type === "client") setClients(clients.filter(c => c.id !== id));
-    if (type === "booking") setBookings(bookings.filter(b => b.id !== id));
+
+    const endpoints = {
+      hotel: `${API_BASE}/hotels/`,
+      room: `${API_BASE}/rooms/`,
+      client: `${API_BASE}/clients/`,
+      booking: `${API_BASE}/bookings/`,
+    };
+
+    try {
+      const res = await fetch(`${endpoints[type]}${id}/`, {
+        method: "DELETE",
+        headers,
+      });
+
+      if (!res.ok && res.status !== 204) {
+        alert("Delete failed.");
+        return;
+      }
+
+      await fetchAll();
+    } catch (err) {
+      alert("Network error.");
+    }
   };
 
   const getClient = (id) => clients.find(c => c.id === id);
   const getRoom = (id) => rooms.find(r => r.id === id);
   const getHotel = (id) => hotels.find(h => h.id === id);
+
+  // ── Loading / Error states ───────────────────────────────
+  if (loading) return (
+    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
+      LOADING...
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c97b6e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "2px", textAlign: "center", padding: "40px" }}>
+      {error}
+    </div>
+  );
 
   return (
     <div style={styles.page}>
@@ -101,8 +177,9 @@ export default function AdminDashboard({ navigate, onLogout }) {
 
       {/* Main */}
       <div style={styles.main}>
+
         {/* Overview */}
-        {tab === "Overview" && (
+        {(tab === "Overview" || tab === "") && (
           <div>
             <h1 style={styles.pageTitle}>Overview</h1>
             <div style={styles.statsGrid}>
@@ -114,7 +191,15 @@ export default function AdminDashboard({ navigate, onLogout }) {
                 { label: "Confirmed", value: bookings.filter(b => b.status === "confirmed").length, icon: "✓", color: "#7eb87e" },
                 { label: "Cancelled", value: bookings.filter(b => b.status === "cancelled").length, icon: "✕", color: "#c97b6e" },
                 { label: "Available Rooms", value: rooms.filter(r => r.is_available).length, icon: "🟢", color: "#7eb87e" },
-                { label: "Total Revenue", value: "₱" + bookings.filter(b => b.status === "confirmed").reduce((a, b) => a + b.total_price, 0).toLocaleString(), icon: "₱", color: "#c9a96e" },
+                {
+                  label: "Total Revenue",
+                  value: "₱" + bookings
+                    .filter(b => b.status === "confirmed")
+                    .reduce((a, b) => a + parseFloat(b.total_price || 0), 0)
+                    .toLocaleString(),
+                  icon: "₱",
+                  color: "#c9a96e"
+                },
               ].map((s, i) => (
                 <div key={i} style={styles.statCard}>
                   <span style={styles.statIcon}>{s.icon}</span>
@@ -127,21 +212,24 @@ export default function AdminDashboard({ navigate, onLogout }) {
             <h2 style={styles.sectionTitle}>Recent Bookings</h2>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead><tr>{["Guest", "Room", "Check-in", "Check-out", "Status", "Total"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                <thead>
+                  <tr>{["Guest", "Room", "Check-in", "Check-out", "Status", "Total"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
+                </thead>
                 <tbody>
-                  {bookings.slice(0, 5).map(b => {
-                    const c = getClient(b.client_id); const r = getRoom(b.room_id);
-                    return (
-                      <tr key={b.id} style={styles.tr}>
-                        <td style={styles.td}>{c?.name}</td>
-                        <td style={styles.td}>{r ? `Room ${r.room_number}` : "—"}</td>
-                        <td style={styles.td}>{b.check_in}</td>
-                        <td style={styles.td}>{b.check_out}</td>
-                        <td style={styles.td}><span style={{ color: statusColor[b.status], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>{b.status}</span></td>
-                        <td style={{ ...styles.td, color: "#c9a96e" }}>₱{b.total_price.toLocaleString()}</td>
-                      </tr>
-                    );
-                  })}
+                  {bookings.slice(0, 5).map(b => (
+                    <tr key={b.id} style={styles.tr}>
+                      <td style={styles.td}>{b.client_name || getClient(b.client)?.name || "—"}</td>
+                      <td style={styles.td}>{b.room_number ? `Room ${b.room_number}` : getRoom(b.room) ? `Room ${getRoom(b.room).room_number}` : "—"}</td>
+                      <td style={styles.td}>{b.check_in}</td>
+                      <td style={styles.td}>{b.check_out}</td>
+                      <td style={styles.td}>
+                        <span style={{ color: statusColor[b.status], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>
+                          {b.status}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, color: "#c9a96e" }}>₱{parseFloat(b.total_price || 0).toLocaleString()}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -157,7 +245,9 @@ export default function AdminDashboard({ navigate, onLogout }) {
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead><tr>{["Name", "Address", "Phone", "Email", "Rooms", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                <thead>
+                  <tr>{["Name", "Address", "Phone", "Email", "Rooms", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
+                </thead>
                 <tbody>
                   {hotels.map(h => (
                     <tr key={h.id} style={styles.tr}>
@@ -187,16 +277,26 @@ export default function AdminDashboard({ navigate, onLogout }) {
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead><tr>{["Hotel", "Room #", "Type", "Price/Night", "Capacity", "Available", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                <thead>
+                  <tr>{["Hotel", "Room #", "Type", "Price/Night", "Capacity", "Available", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
+                </thead>
                 <tbody>
                   {rooms.map(r => (
                     <tr key={r.id} style={styles.tr}>
-                      <td style={styles.td}>{getHotel(r.hotel)?.name}</td>
+                      <td style={styles.td}>{r.hotel_name || getHotel(r.hotel)?.name || "—"}</td>
                       <td style={{ ...styles.td, color: "#e8dcc8" }}>Room {r.room_number}</td>
-                      <td style={styles.td}><span style={{ color: roomTypeColor[r.room_type], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>{r.room_type}</span></td>
-                      <td style={{ ...styles.td, color: "#c9a96e" }}>₱{r.price_per_night.toLocaleString()}</td>
+                      <td style={styles.td}>
+                        <span style={{ color: roomTypeColor[r.room_type], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>
+                          {r.room_type}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, color: "#c9a96e" }}>₱{parseFloat(r.price_per_night).toLocaleString()}</td>
                       <td style={styles.td}>{r.capacity}</td>
-                      <td style={styles.td}><span style={{ color: r.is_available ? "#7eb87e" : "#c97b6e", fontSize: "11px", fontFamily: "'Jost',sans-serif", textTransform: "uppercase", letterSpacing: "1px" }}>{r.is_available ? "Yes" : "No"}</span></td>
+                      <td style={styles.td}>
+                        <span style={{ color: r.is_available ? "#7eb87e" : "#c97b6e", fontSize: "11px", fontFamily: "'Jost',sans-serif", textTransform: "uppercase", letterSpacing: "1px" }}>
+                          {r.is_available ? "Yes" : "No"}
+                        </span>
+                      </td>
                       <td style={styles.td}>
                         <button style={styles.editBtn} onClick={() => openEdit("room", r)}>Edit</button>
                         <button style={styles.delBtn} onClick={() => del("room", r.id)}>Delete</button>
@@ -218,15 +318,17 @@ export default function AdminDashboard({ navigate, onLogout }) {
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead><tr>{["Name", "Email", "Phone", "Joined", "Bookings", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                <thead>
+                  <tr>{["Name", "Email", "Phone", "Joined", "Bookings", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
+                </thead>
                 <tbody>
                   {clients.map(c => (
                     <tr key={c.id} style={styles.tr}>
                       <td style={{ ...styles.td, color: "#e8dcc8", fontFamily: "'Cormorant Garamond',serif", fontSize: "17px" }}>{c.name}</td>
                       <td style={styles.td}>{c.email}</td>
                       <td style={styles.td}>{c.phone}</td>
-                      <td style={styles.td}>{c.created_at}</td>
-                      <td style={styles.td}>{bookings.filter(b => b.client_id === c.id).length}</td>
+                      <td style={styles.td}>{c.created_at ? c.created_at.split("T")[0] : "—"}</td>
+                      <td style={styles.td}>{bookings.filter(b => b.client === c.id).length}</td>
                       <td style={styles.td}>
                         <button style={styles.editBtn} onClick={() => openEdit("client", c)}>Edit</button>
                         <button style={styles.delBtn} onClick={() => del("client", c.id)}>Delete</button>
@@ -244,30 +346,40 @@ export default function AdminDashboard({ navigate, onLogout }) {
           <div>
             <div style={styles.tabHeader}>
               <h1 style={styles.pageTitle}>Bookings</h1>
+              <button style={styles.addBtn} onClick={() => openAdd("booking")}>+ Add Booking</button>
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead><tr>{["#", "Guest", "Room", "Check-in", "Check-out", "Status", "Total", "Notes", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+                <thead>
+                  <tr>{["#", "Guest", "Room", "Check-in", "Check-out", "Status", "Total", "Notes", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
+                </thead>
                 <tbody>
-                  {bookings.map(b => {
-                    const c = getClient(b.client_id); const r = getRoom(b.room_id);
-                    return (
-                      <tr key={b.id} style={styles.tr}>
-                        <td style={styles.td}>#{b.id}</td>
-                        <td style={{ ...styles.td, color: "#e8dcc8", fontFamily: "'Cormorant Garamond',serif", fontSize: "16px" }}>{c?.name}</td>
-                        <td style={styles.td}>{r ? `Room ${r.room_number}` : "—"}</td>
-                        <td style={styles.td}>{b.check_in}</td>
-                        <td style={styles.td}>{b.check_out}</td>
-                        <td style={styles.td}><span style={{ color: statusColor[b.status], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>{b.status}</span></td>
-                        <td style={{ ...styles.td, color: "#c9a96e" }}>₱{b.total_price.toLocaleString()}</td>
-                        <td style={{ ...styles.td, maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.notes || "—"}</td>
-                        <td style={styles.td}>
-                          <button style={styles.editBtn} onClick={() => openEdit("booking", b)}>Edit</button>
-                          <button style={styles.delBtn} onClick={() => del("booking", b.id)}>Delete</button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {bookings.map(b => (
+                    <tr key={b.id} style={styles.tr}>
+                      <td style={styles.td}>#{b.id}</td>
+                      <td style={{ ...styles.td, color: "#e8dcc8", fontFamily: "'Cormorant Garamond',serif", fontSize: "16px" }}>
+                        {b.client_name || getClient(b.client)?.name || "—"}
+                      </td>
+                      <td style={styles.td}>
+                        {b.room_number ? `Room ${b.room_number}` : getRoom(b.room) ? `Room ${getRoom(b.room).room_number}` : "—"}
+                      </td>
+                      <td style={styles.td}>{b.check_in}</td>
+                      <td style={styles.td}>{b.check_out}</td>
+                      <td style={styles.td}>
+                        <span style={{ color: statusColor[b.status], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>
+                          {b.status}
+                        </span>
+                      </td>
+                      <td style={{ ...styles.td, color: "#c9a96e" }}>₱{parseFloat(b.total_price || 0).toLocaleString()}</td>
+                      <td style={{ ...styles.td, maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {b.notes || "—"}
+                      </td>
+                      <td style={styles.td}>
+                        <button style={styles.editBtn} onClick={() => openEdit("booking", b)}>Edit</button>
+                        <button style={styles.delBtn} onClick={() => del("booking", b.id)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -280,10 +392,14 @@ export default function AdminDashboard({ navigate, onLogout }) {
         <div style={styles.overlay} onClick={closeModal}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHead}>
-              <h3 style={styles.modalTitle}>{modal.mode === "add" ? "Add" : "Edit"} {modal.type.charAt(0).toUpperCase() + modal.type.slice(1)}</h3>
+              <h3 style={styles.modalTitle}>
+                {modal.mode === "add" ? "Add" : "Edit"} {modal.type.charAt(0).toUpperCase() + modal.type.slice(1)}
+              </h3>
               <button style={styles.closeBtn} onClick={closeModal}>✕</button>
             </div>
             <div style={styles.modalBody}>
+
+              {/* Hotel Form */}
               {modal.type === "hotel" && (
                 <>
                   {[["name", "Hotel Name", "text"], ["address", "Address", "text"], ["phone", "Phone", "text"], ["email", "Email", "email"]].map(([k, l, t]) => (
@@ -294,6 +410,8 @@ export default function AdminDashboard({ navigate, onLogout }) {
                   ))}
                 </>
               )}
+
+              {/* Room Form */}
               {modal.type === "room" && (
                 <>
                   <div style={styles.field}>
@@ -325,6 +443,8 @@ export default function AdminDashboard({ navigate, onLogout }) {
                   </div>
                 </>
               )}
+
+              {/* Client Form */}
               {modal.type === "client" && (
                 <>
                   {[["name", "Full Name", "text"], ["email", "Email", "email"], ["phone", "Phone", "text"]].map(([k, l, t]) => (
@@ -335,11 +455,31 @@ export default function AdminDashboard({ navigate, onLogout }) {
                   ))}
                 </>
               )}
+
+              {/* Booking Form */}
               {modal.type === "booking" && (
                 <>
                   <div style={styles.field}>
+                    <label style={styles.fieldLabel}>Client</label>
+                    <select style={styles.input} value={form.client || ""} onChange={e => setForm({ ...form, client: e.target.value })}>
+                      <option value="">Select client</option>
+                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div style={styles.field}>
+                    <label style={styles.fieldLabel}>Room</label>
+                    <select style={styles.input} value={form.room || ""} onChange={e => setForm({ ...form, room: e.target.value })}>
+                      <option value="">Select room</option>
+                      {rooms.map(r => (
+                        <option key={r.id} value={r.id}>
+                          Room {r.room_number} — {r.hotel_name || getHotel(r.hotel)?.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={styles.field}>
                     <label style={styles.fieldLabel}>Status</label>
-                    <select style={styles.input} value={form.status || ""} onChange={e => setForm({ ...form, status: e.target.value })}>
+                    <select style={styles.input} value={form.status || "confirmed"} onChange={e => setForm({ ...form, status: e.target.value })}>
                       {["confirmed", "cancelled", "rescheduled"].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
@@ -355,6 +495,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                   </div>
                 </>
               )}
+
               <button style={styles.saveBtn} onClick={save}>Save</button>
             </div>
           </div>
@@ -363,43 +504,3 @@ export default function AdminDashboard({ navigate, onLogout }) {
     </div>
   );
 }
-
-const styles = {
-  page: { display: "flex", background: "#0d0d0d", minHeight: "100vh", color: "#e8dcc8", fontFamily: "'Cormorant Garamond', serif" },
-  sidebar: { width: "220px", borderRight: "1px solid #1e1a16", display: "flex", flexDirection: "column", padding: "32px 0", position: "sticky", top: 0, height: "100vh", flexShrink: 0 },
-  sidebarLogo: { fontSize: "18px", fontWeight: 600, letterSpacing: "4px", padding: "0 24px 4px" },
-  sidebarSub: { fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "3px", color: "#4a3f32", padding: "0 24px", margin: "0 0 32px", textTransform: "uppercase" },
-  sidebarNav: { display: "flex", flexDirection: "column", gap: "2px", flex: 1 },
-  sidebarBtn: { background: "none", border: "none", color: "#6a5f52", cursor: "pointer", padding: "12px 24px", textAlign: "left", fontFamily: "'Jost',sans-serif", fontSize: "13px", letterSpacing: "1px" },
-  sidebarActive: { color: "#c9a96e", background: "rgba(201,169,110,0.08)", borderLeft: "2px solid #c9a96e" },
-  sidebarFooter: { padding: "24px" },
-  backBtn: { background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.2)", color: "#a09080", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "7px 14px", width: "100%", textAlign: "left" },
-  logoutBtn: { background: "rgba(201,123,110,0.08)", border: "1px solid rgba(201,123,110,0.25)", color: "#c97b6e", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "1px", padding: "7px 14px", marginTop: "12px", width: "100%", textAlign: "left" },
-  main: { flex: 1, padding: "48px 60px", overflowY: "auto" },
-  pageTitle: { fontSize: "42px", fontWeight: 300, margin: "0 0 40px" },
-  tabHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" },
-  statsGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "60px" },
-  statCard: { border: "1px solid #1e1a16", padding: "28px", display: "flex", flexDirection: "column", gap: "8px" },
-  statIcon: { fontSize: "20px" },
-  statValue: { fontSize: "32px", fontWeight: 300 },
-  statLabel: { fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#4a3f32", textTransform: "uppercase" },
-  sectionTitle: { fontSize: "28px", fontWeight: 300, margin: "0 0 24px" },
-  tableWrap: { border: "1px solid #1e1a16", overflow: "hidden" },
-  table: { width: "100%", borderCollapse: "collapse" },
-  th: { fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#4a3f32", textTransform: "uppercase", padding: "14px 20px", textAlign: "left", borderBottom: "1px solid #1e1a16", background: "#111" },
-  tr: { borderBottom: "1px solid #1a1612" },
-  td: { padding: "14px 20px", fontFamily: "'Jost',sans-serif", fontSize: "13px", color: "#8a7a68", verticalAlign: "middle" },
-  addBtn: { background: "#c9a96e", border: "none", color: "#0d0d0d", padding: "12px 28px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", cursor: "pointer", fontWeight: 500, textTransform: "uppercase" },
-  editBtn: { background: "none", border: "1px solid #2a2520", color: "#8a7a68", padding: "6px 14px", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "11px", marginRight: "8px" },
-  delBtn: { background: "none", border: "1px solid #3a1a16", color: "#c97b6e", padding: "6px 14px", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "11px" },
-  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 },
-  modal: { background: "#111", border: "1px solid #2a2520", width: "440px", maxHeight: "80vh", overflow: "auto" },
-  modalHead: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "24px 32px", borderBottom: "1px solid #1e1a16" },
-  modalTitle: { fontSize: "22px", fontWeight: 400, margin: 0 },
-  closeBtn: { background: "none", border: "none", color: "#6a5f52", cursor: "pointer", fontSize: "16px" },
-  modalBody: { padding: "24px 32px", display: "flex", flexDirection: "column", gap: "16px" },
-  field: {},
-  fieldLabel: { display: "block", fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#6a5f52", textTransform: "uppercase", marginBottom: "8px" },
-  input: { width: "100%", background: "#0d0d0d", border: "1px solid #2a2520", color: "#e8dcc8", padding: "10px 14px", fontFamily: "'Jost',sans-serif", fontSize: "14px", boxSizing: "border-box", outline: "none" },
-  saveBtn: { background: "#c9a96e", border: "none", color: "#0d0d0d", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "12px", letterSpacing: "2px", cursor: "pointer", fontWeight: 500, textTransform: "uppercase", marginTop: "8px" },
-};
