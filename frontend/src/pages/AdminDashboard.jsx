@@ -408,9 +408,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                     // Get all client IDs who booked a room in this hotel
                     const hotelRoomIds = rooms.filter(r => r.hotel === h.id).map(r => r.id);
                     const branchBookings = bookings.filter(b => hotelRoomIds.includes(b.room));
-                    const uniqueClientIds = [...new Set(branchBookings.map(b => b.client))];
                     const confirmedCount = branchBookings.filter(b => b.status === "confirmed").length;
-                    const totalClients = clients.length;
                     return (
                       <div key={h.id}
                         onClick={() => setSelectedHotelForClients(h)}
