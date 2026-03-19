@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Hotel, Room, Client, Booking
 from .serializers import HotelSerializer, RoomSerializer, ClientSerializer, BookingSerializer
-
+from datetime import date
 
 # --- Hotel ---
 class HotelListCreate(generics.ListCreateAPIView):
@@ -18,8 +18,18 @@ class HotelDetail(generics.RetrieveUpdateDestroyAPIView):
 
 # --- Room ---
 class RoomListCreate(generics.ListCreateAPIView):
-    queryset = Room.objects.all()
     serializer_class = RoomSerializer
+
+    def get_queryset(self):
+        today = date.today()
+        expired_bookings = Booking.objects.filter(
+            status__in=['confirmed', 'rescheduled'],
+            check_out__lt=today
+        )
+        for booking in expired_bookings:
+            booking.room.is_available = True
+            booking.room.save()
+        return Room.objects.all()
 
 
 class RoomDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -43,10 +53,27 @@ class BookingListCreate(generics.ListCreateAPIView):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
 
+    def perform_create(self, serializer):
+        booking = serializer.save()
+        # Mark room as unavailable when booking is confirmed
+        if booking.status == 'confirmed':
+            booking.room.is_available = False
+            booking.room.save()
+
 
 class BookingDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
+
+    def perform_update(self, serializer):
+        booking = serializer.save()
+        # If cancelled, mark room as available again
+        if booking.status == 'cancelled':
+            booking.room.is_available = True
+            booking.room.save()
+        elif booking.status in ['confirmed', 'rescheduled']:
+            booking.room.is_available = False
+            booking.room.save()
 
 
 # --- Cancel Booking ---
@@ -55,21 +82,15 @@ class CancelBooking(APIView):
         try:
             booking = Booking.objects.get(pk=pk)
             if booking.status == 'cancelled':
-                return Response(
-                    {'error': 'Booking is already cancelled.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+                return Response({'error': 'Booking is already cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
             booking.status = 'cancelled'
             booking.save()
-            return Response(
-                {'message': 'Booking cancelled successfully.'},
-                status=status.HTTP_200_OK
-            )
+            # Free up the room
+            booking.room.is_available = True
+            booking.room.save()
+            return Response({'message': 'Booking cancelled successfully.'}, status=status.HTTP_200_OK)
         except Booking.DoesNotExist:
-            return Response(
-                {'error': 'Booking not found.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 # --- Reschedule Booking ---
