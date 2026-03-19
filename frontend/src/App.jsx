@@ -10,18 +10,26 @@ import FeaturePage from "./pages/FeaturePage";
 import FloorMapPage from "./pages/FloorMapPage";
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState("landing");
+  const [currentPage, setCurrentPage] = useState(
+  () => {
+    if (sessionStorage.getItem("isAdminAuthenticated") === "true") return "admin";
+    return sessionStorage.getItem("currentPage") || "landing";
+  }
+);
   const [previousPage, setPreviousPage] = useState("landing");
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(
+    () => sessionStorage.getItem("isAdminAuthenticated") === "true"
+  );
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [scrollToFeatures, setScrollToFeatures] = useState(false);
 
   const navigate = (page, data) => {
-    if (data) setSelectedFeature(data);
-    setPreviousPage(currentPage);
-    setCurrentPage(page);
-    setScrollToFeatures(false);
-  };
+  if (data) setSelectedFeature(data);
+  setPreviousPage(currentPage);
+  setCurrentPage(page);
+  setScrollToFeatures(false);
+  sessionStorage.setItem("currentPage", page);
+};
 
   const navigateToFeatures = () => {
     setScrollToFeatures(true);
@@ -30,9 +38,10 @@ export default function App() {
   };
 
   const goBack = () => {
-    setCurrentPage(previousPage);
-    setPreviousPage("landing");
-  };
+  setCurrentPage(previousPage);
+  setPreviousPage("landing");
+  sessionStorage.setItem("currentPage", previousPage);
+};
 
   const handleAdminNav = () => {
     setIsAdminAuthenticated(false);
@@ -40,6 +49,8 @@ export default function App() {
   };
 
   const handleAdminLogout = () => {
+    sessionStorage.removeItem("isAdminAuthenticated");
+    sessionStorage.removeItem("authToken");
     setIsAdminAuthenticated(false);
     navigate("landing");
   };
@@ -50,7 +61,10 @@ export default function App() {
       {currentPage === "landing" && <LandingPage navigate={navigate} onAdminClick={handleAdminNav} scrollToFeatures={scrollToFeatures} />}
       {currentPage === "book" && <BookAppointment navigate={navigate} goBack={goBack} previousPage={previousPage} />}
       {currentPage === "bookings" && <ViewBookings navigate={navigate} goBack={goBack} previousPage={previousPage} />}
-      {currentPage === "admin" && !isAdminAuthenticated && <AdminLogin navigate={navigate} onLoginSuccess={() => setIsAdminAuthenticated(true)} />}
+      {currentPage === "admin" && !isAdminAuthenticated && <AdminLogin navigate={navigate} onLoginSuccess={() => {
+        sessionStorage.setItem("isAdminAuthenticated", "true");
+        setIsAdminAuthenticated(true);
+      }} />}
       {currentPage === "admin" && isAdminAuthenticated && <AdminDashboard navigate={navigate} onLogout={handleAdminLogout} />}
       {currentPage === "rooms" && <RoomsPage navigate={navigate} goBack={goBack} />}
       {currentPage === "about" && <AboutPage navigate={navigate} />}

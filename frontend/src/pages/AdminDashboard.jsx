@@ -77,8 +77,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
       payload.hotel = parseInt(payload.hotel);
       payload.price_per_night = parseFloat(payload.price_per_night);
       payload.capacity = parseInt(payload.capacity);
-      payload.is_available = payload.is_available === "true" || payload.is_available === true;
-    }
+      payload.is_available = payload.is_available === undefined ? true : (payload.is_available === "true" || payload.is_available === true);}
 
     if (type === "booking") {
       payload.room = parseInt(payload.room);
@@ -160,15 +159,17 @@ export default function AdminDashboard({ navigate, onLogout }) {
 
       {/* Sidebar */}
       <div style={styles.sidebar}>
-        <div style={styles.sidebarLogo}>GRAND<span style={{ color: "#c9a96e" }}>VELOUR</span></div>
-        <p style={styles.sidebarSub}>Admin Panel</p>
-        <nav style={styles.sidebarNav}>
-          {TABS.map(t => (
-            <button key={t} style={{ ...styles.sidebarBtn, ...(tab === t ? styles.sidebarActive : {}) }} onClick={() => setTab(t)}>
-              {t === "Overview" ? "◈" : t === "Hotels" ? "🏨" : t === "Rooms" ? "🛏" : t === "Clients" ? "👤" : "📋"} {t}
-            </button>
-          ))}
-        </nav>
+        <div>
+          <div style={styles.sidebarLogo}>GRAND<span style={{ color: "#c9a96e" }}>VELOUR</span></div>
+          <p style={styles.sidebarSub}>Admin Panel</p>
+          <nav style={styles.sidebarNav}>
+            {TABS.map(t => (
+              <button key={t} style={{ ...styles.sidebarBtn, ...(tab === t ? styles.sidebarActive : {}) }} onClick={() => setTab(t)}>
+                {t === "Overview" ? "≡" : t === "Hotels" ? "🏨" : t === "Rooms" ? "🛏️" : t === "Clients" ? "👤" : "📋"} {t}
+              </button>
+            ))}
+          </nav>
+        </div>
         <div style={styles.sidebarFooter}>
           <button style={styles.backBtn} onClick={() => navigate("landing")}>← Back to Site</button>
           <button style={styles.logoutBtn} onClick={onLogout || (() => navigate("landing"))}>⏻ Logout</button>
@@ -190,11 +191,12 @@ export default function AdminDashboard({ navigate, onLogout }) {
                 { label: "Bookings", value: bookings.length, icon: "📋", color: "#c97b6e" },
                 { label: "Confirmed", value: bookings.filter(b => b.status === "confirmed").length, icon: "✓", color: "#7eb87e" },
                 { label: "Cancelled", value: bookings.filter(b => b.status === "cancelled").length, icon: "✕", color: "#c97b6e" },
+                { label: "Rescheduled", value: bookings.filter(b => b.status === "rescheduled").length, icon: "↻", color: "#c9a96e" },
                 { label: "Available Rooms", value: rooms.filter(r => r.is_available).length, icon: "🟢", color: "#7eb87e" },
                 {
                   label: "Total Revenue",
                   value: "₱" + bookings
-                    .filter(b => b.status === "confirmed")
+                    .filter(b => b.status === "confirmed" || b.status === "rescheduled")
                     .reduce((a, b) => a + parseFloat(b.total_price || 0), 0)
                     .toLocaleString(),
                   icon: "₱",
@@ -436,8 +438,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                   </div>
                   <div style={styles.field}>
                     <label style={styles.fieldLabel}>Available</label>
-                    <select style={styles.input} value={String(form.is_available)} onChange={e => setForm({ ...form, is_available: e.target.value })}>
-                      <option value="true">Yes</option>
+                    <select style={styles.input} value={form.is_available === undefined ? "true" : String(form.is_available)} onChange={e => setForm({ ...form, is_available: e.target.value })}>  <option value="true">Yes</option>
                       <option value="false">No</option>
                     </select>
                   </div>

@@ -23,8 +23,8 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [selected, setSelected] = useState(null);
+  const [activeAction, setActiveAction] = useState(null);
 
-  // ── Fetch bookings from API ──────────────────────────────
   useEffect(() => {
     const fetchBookings = async () => {
       setLoading(true);
@@ -58,7 +58,11 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
   const nights = (b) =>
     Math.max(0, (new Date(b.check_out) - new Date(b.check_in)) / (1000 * 60 * 60 * 24));
 
-  // ── Loading / Error ──────────────────────────────────────
+  const closeModal = () => {
+    setSelected(null);
+    setActiveAction(null);
+  };
+
   if (loading) return (
     <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
       LOADING...
@@ -141,7 +145,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                   </td>
                 </tr>
               ) : filtered.map(b => (
-                <tr key={b.id} style={styles.tr} onClick={() => setSelected(b)}>
+                <tr key={b.id} style={styles.tr} onClick={() => { setSelected(b); setActiveAction(null); }}>
                   <td style={styles.td}>#{b.id}</td>
                   <td style={styles.td}>
                     <div style={styles.guestName}>{b.client_name || "—"}</div>
@@ -183,90 +187,216 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
 
       {/* Detail Modal */}
       {selected && (
-        <div style={styles.modalOverlay} onClick={() => setSelected(null)}>
+        <div style={styles.modalOverlay} onClick={closeModal}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h3 style={styles.modalTitle}>Booking #{selected.id}</h3>
-              <button style={styles.closeBtn} onClick={() => setSelected(null)}>✕</button>
+              <button style={styles.closeBtn} onClick={closeModal}>✕</button>
             </div>
             <div style={styles.modalBody}>
-              {[
-                { label: "GUEST", value: selected.client_name, sub: null },
-                { label: "HOTEL", value: selected.hotel_name },
-                { label: "ROOM", value: selected.room_number ? `Room ${selected.room_number}` : "—" },
-                { label: "CHECK-IN", value: selected.check_in },
-                { label: "CHECK-OUT", value: selected.check_out },
-                { label: "DURATION", value: `${nights(selected)} night${nights(selected) > 1 ? "s" : ""}` },
-                { label: "TOTAL PRICE", value: `₱${parseFloat(selected.total_price || 0).toLocaleString()}`, highlight: true },
-                ...(selected.notes ? [{ label: "NOTES", value: selected.notes }] : []),
-              ].map((row, i) => (
-                <div key={i} style={styles.modalRow}>
-                  <span style={styles.modalLabel}>{row.label}</span>
-                  <div>
+
+              {/* Booking Details — hidden when an action is active */}
+              {!activeAction && (
+                <>
+                  {[
+                    { label: "GUEST", value: selected.client_name },
+                    { label: "HOTEL", value: selected.hotel_name },
+                    { label: "ROOM", value: selected.room_number ? `Room ${selected.room_number}` : "—" },
+                    { label: "CHECK-IN", value: selected.check_in },
+                    { label: "CHECK-OUT", value: selected.check_out },
+                    { label: "DURATION", value: `${nights(selected)} night${nights(selected) > 1 ? "s" : ""}` },
+                    { label: "TOTAL PRICE", value: `₱${parseFloat(selected.total_price || 0).toLocaleString()}`, highlight: true },
+                    ...(selected.notes ? [{ label: "NOTES", value: selected.notes }] : []),
+                  ].map((row, i) => (
+                    <div key={i} style={styles.modalRow}>
+                      <span style={styles.modalLabel}>{row.label}</span>
+                      <div>
+                        <span style={{
+                          ...styles.modalValue,
+                          ...(row.highlight ? { color: "#c9a96e", fontSize: "22px" } : {})
+                        }}>
+                          {row.value}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={styles.modalRow}>
+                    <span style={styles.modalLabel}>STATUS</span>
                     <span style={{
-                      ...styles.modalValue,
-                      ...(row.highlight ? { color: "#c9a96e", fontSize: "22px" } : {})
+                      ...styles.statusBadge,
+                      color: statusStyle[selected.status]?.color,
+                      background: statusStyle[selected.status]?.bg,
+                      border: `1px solid ${statusStyle[selected.status]?.border}`
                     }}>
-                      {row.value}
+                      {selected.status}
                     </span>
                   </div>
-                </div>
-              ))}
-              <div style={styles.modalRow}>
-                <span style={styles.modalLabel}>STATUS</span>
-                <span style={{
-                  ...styles.statusBadge,
-                  color: statusStyle[selected.status]?.color,
-                  background: statusStyle[selected.status]?.bg,
-                  border: `1px solid ${statusStyle[selected.status]?.border}`
-                }}>
-                  {selected.status}
-                </span>
-              </div>
+                </>
+              )}
 
-              {/* Cancel & Reschedule — only for confirmed bookings */}
+              {/* Actions — only for confirmed bookings */}
               {selected.status === "confirmed" && (
-                <div style={{ padding: "20px 32px", display: "flex", gap: "12px", borderTop: "1px solid #1e1a16" }}>
-                  <button
-                    style={{ flex: 1, background: "rgba(201,123,110,0.1)", border: "1px solid rgba(201,123,110,0.3)", color: "#c97b6e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
-                    onClick={async () => {
-                      if (!window.confirm("Cancel this booking?")) return;
-                      const res = await fetch(`${API_BASE}/bookings/${selected.id}/cancel/`, { method: "PATCH" });
-                      if (res.ok) {
-                        setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, status: "cancelled" } : b));
-                        setSelected(prev => ({ ...prev, status: "cancelled" }));
-                      } else {
-                        alert("Could not cancel booking.");
-                      }
-                    }}
-                  >
-                    Cancel Booking
-                  </button>
+                <div style={{ borderTop: !activeAction ? "1px solid #1e1a16" : "none" }}>
 
-                  <button
-                    style={{ flex: 1, background: "rgba(201,169,110,0.1)", border: "1px solid rgba(201,169,110,0.3)", color: "#c9a96e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
-                    onClick={async () => {
-                      const newCheckIn = window.prompt("New check-in date (YYYY-MM-DD):", selected.check_in);
-                      if (!newCheckIn) return;
-                      const newCheckOut = window.prompt("New check-out date (YYYY-MM-DD):", selected.check_out);
-                      if (!newCheckOut) return;
-                      const res = await fetch(`${API_BASE}/bookings/${selected.id}/reschedule/`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ check_in: newCheckIn, check_out: newCheckOut }),
-                      });
-                      if (res.ok) {
-                        const updated = await res.json();
-                        setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, ...updated } : b));
-                        setSelected(prev => ({ ...prev, ...updated }));
-                      } else {
-                        const err = await res.json();
-                        alert("Error: " + JSON.stringify(err));
-                      }
-                    }}
-                  >
-                    Reschedule
-                  </button>
+                  {/* Action Buttons */}
+                  {!activeAction && (
+                    <div style={{ padding: "20px 32px", display: "flex", gap: "12px" }}>
+                      <button
+                        style={{ flex: 1, background: "rgba(106,159,181,0.1)", border: "1px solid rgba(106,159,181,0.3)", color: "#6a9fb5", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
+                        onClick={() => setActiveAction("edit")}
+                      >
+                        Edit Profile
+                      </button>
+                      <button
+                        style={{ flex: 1, background: "rgba(201,169,110,0.1)", border: "1px solid rgba(201,169,110,0.3)", color: "#c9a96e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
+                        onClick={() => setActiveAction("reschedule")}
+                      >
+                        Reschedule
+                      </button>
+                      <button
+                        style={{ flex: 1, background: "rgba(201,123,110,0.1)", border: "1px solid rgba(201,123,110,0.3)", color: "#c97b6e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
+                        onClick={() => setActiveAction("cancel")}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Edit Profile Form */}
+                  {activeAction === "edit" && (
+                    <div style={{ padding: "28px 32px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                        <p style={{ fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#c9a96e", textTransform: "uppercase", margin: 0 }}>Edit Profile</p>
+                        <button style={{ background: "none", border: "none", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "11px" }} onClick={() => setActiveAction(null)}>← Back</button>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                        {[
+                          ["editName", "Full Name", "text", selected.client_name],
+                          ["editEmail", "Email", "email", ""],
+                          ["editPhone", "Phone", "text", ""],
+                          ["editNotes", "Special Requests / Notes", "text", selected.notes || ""],
+                        ].map(([key, label, type, defaultVal]) => (
+                          <div key={key}>
+                            <label style={{ display: "block", fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#6a5f52", textTransform: "uppercase", marginBottom: "6px" }}>{label}</label>
+                            <input
+                              type={type}
+                              id={`modal-${key}`}
+                              defaultValue={defaultVal}
+                              style={{ width: "100%", background: "#0d0d0d", border: "1px solid #2a2520", color: "#e8dcc8", padding: "10px 14px", fontFamily: "'Jost',sans-serif", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
+                            />
+                          </div>
+                        ))}
+                        <button
+                          style={{ background: "#6a9fb5", border: "none", color: "#0d0d0d", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer", fontWeight: 500, marginTop: "4px" }}
+                          onClick={async () => {
+                            const newName = document.getElementById("modal-editName").value;
+                            const newEmail = document.getElementById("modal-editEmail").value;
+                            const newPhone = document.getElementById("modal-editPhone").value;
+                            const newNotes = document.getElementById("modal-editNotes").value;
+                            const [clientRes, bookingRes] = await Promise.all([
+                              fetch(`${API_BASE}/clients/${selected.client}/`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone }),
+                              }),
+                              fetch(`${API_BASE}/bookings/${selected.id}/`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ notes: newNotes }),
+                              }),
+                            ]);
+                            if (clientRes.ok && bookingRes.ok) {
+                              const updatedClient = await clientRes.json();
+                              const updatedBooking = await bookingRes.json();
+                              setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, client_name: updatedClient.name, notes: updatedBooking.notes } : b));
+                              setSelected(prev => ({ ...prev, client_name: updatedClient.name, notes: updatedBooking.notes }));
+                              setActiveAction(null);
+                              alert("Profile updated!");
+                            } else {
+                              alert("Could not update. Check your inputs.");
+                            }
+                          }}
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reschedule Form */}
+                  {activeAction === "reschedule" && (
+                    <div style={{ padding: "28px 32px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                        <p style={{ fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#c9a96e", textTransform: "uppercase", margin: 0 }}>Reschedule</p>
+                        <button style={{ background: "none", border: "none", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "11px" }} onClick={() => setActiveAction(null)}>← Back</button>
+                      </div>
+                      <div style={{ display: "flex", gap: "12px", marginBottom: "12px" }}>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: "block", fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#6a5f52", textTransform: "uppercase", marginBottom: "6px" }}>Check-in</label>
+                          <input type="date" id="modal-checkin" defaultValue={selected.check_in}
+                            style={{ width: "100%", background: "#0d0d0d", border: "1px solid #2a2520", color: "#e8dcc8", padding: "10px 14px", fontFamily: "'Jost',sans-serif", fontSize: "13px", boxSizing: "border-box", outline: "none", colorScheme: "dark" }}
+                          />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <label style={{ display: "block", fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#6a5f52", textTransform: "uppercase", marginBottom: "6px" }}>Check-out</label>
+                          <input type="date" id="modal-checkout" defaultValue={selected.check_out}
+                            style={{ width: "100%", background: "#0d0d0d", border: "1px solid #2a2520", color: "#e8dcc8", padding: "10px 14px", fontFamily: "'Jost',sans-serif", fontSize: "13px", boxSizing: "border-box", outline: "none", colorScheme: "dark" }}
+                          />
+                        </div>
+                      </div>
+                      <button
+                        style={{ background: "rgba(201,169,110,0.15)", border: "1px solid rgba(201,169,110,0.3)", color: "#c9a96e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer", width: "100%" }}
+                        onClick={async () => {
+                          const newCheckIn = document.getElementById("modal-checkin").value;
+                          const newCheckOut = document.getElementById("modal-checkout").value;
+                          if (!newCheckIn || !newCheckOut) return alert("Please select both dates.");
+                          const res = await fetch(`${API_BASE}/bookings/${selected.id}/reschedule/`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ check_in: newCheckIn, check_out: newCheckOut }),
+                          });
+                          if (res.ok) {
+                            const updated = await res.json();
+                            setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, ...updated } : b));
+                            setSelected(prev => ({ ...prev, ...updated }));
+                            setActiveAction(null);
+                          } else {
+                            const err = await res.json();
+                            alert("Error: " + JSON.stringify(err));
+                          }
+                        }}
+                      >
+                        Confirm Reschedule
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Cancel Confirm */}
+                  {activeAction === "cancel" && (
+                    <div style={{ padding: "28px 32px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                        <p style={{ fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#c97b6e", textTransform: "uppercase", margin: 0 }}>Cancel Booking</p>
+                        <button style={{ background: "none", border: "none", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "11px" }} onClick={() => setActiveAction(null)}>← Back</button>
+                      </div>
+                      <p style={{ fontFamily: "'Jost',sans-serif", fontSize: "13px", color: "#8a7a68", marginBottom: "20px" }}>Are you sure you want to cancel this booking? This cannot be undone.</p>
+                      <button
+                        style={{ width: "100%", background: "rgba(201,123,110,0.15)", border: "1px solid rgba(201,123,110,0.4)", color: "#c97b6e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
+                        onClick={async () => {
+                          const res = await fetch(`${API_BASE}/bookings/${selected.id}/cancel/`, { method: "PATCH" });
+                          if (res.ok) {
+                            setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, status: "cancelled" } : b));
+                            setSelected(prev => ({ ...prev, status: "cancelled" }));
+                            setActiveAction(null);
+                          } else {
+                            alert("Could not cancel booking.");
+                          }
+                        }}
+                      >
+                        Confirm Cancellation
+                      </button>
+                    </div>
+                  )}
+
                 </div>
               )}
             </div>
