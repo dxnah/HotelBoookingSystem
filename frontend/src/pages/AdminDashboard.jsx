@@ -46,9 +46,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const openAdd = (type) => { setModal({ type, mode: "add" }); setForm({}); };
   const openEdit = (type, data) => { setModal({ type, mode: "edit" }); setForm({ ...data }); };
@@ -58,17 +56,14 @@ export default function AdminDashboard({ navigate, onLogout }) {
   const save = async () => {
     const { type, mode } = modal;
     const isEdit = mode === "edit";
-
     const endpoints = {
       hotel: `${API_BASE}/hotels/`,
       room: `${API_BASE}/rooms/`,
       client: `${API_BASE}/clients/`,
       booking: `${API_BASE}/bookings/`,
     };
-
     const url = isEdit ? `${endpoints[type]}${form.id}/` : endpoints[type];
     const method = isEdit ? "PUT" : "POST";
-
     const payload = { ...form };
     delete payload.hotel_name;
     delete payload.client_name;
@@ -77,8 +72,8 @@ export default function AdminDashboard({ navigate, onLogout }) {
       payload.hotel = parseInt(payload.hotel);
       payload.price_per_night = parseFloat(payload.price_per_night);
       payload.capacity = parseInt(payload.capacity);
-      payload.is_available = payload.is_available === undefined ? true : (payload.is_available === "true" || payload.is_available === true);}
-
+      payload.is_available = payload.is_available === undefined ? true : (payload.is_available === "true" || payload.is_available === true);
+    }
     if (type === "booking") {
       payload.room = parseInt(payload.room);
       payload.client = parseInt(payload.client);
@@ -89,18 +84,12 @@ export default function AdminDashboard({ navigate, onLogout }) {
     }
 
     try {
-      const res = await fetch(url, {
-        method,
-        headers,
-        body: JSON.stringify(payload),
-      });
-
+      const res = await fetch(url, { method, headers, body: JSON.stringify(payload) });
       if (!res.ok) {
         const errData = await res.json();
         alert("Error: " + JSON.stringify(errData));
         return;
       }
-
       await fetchAll();
       closeModal();
     } catch (err) {
@@ -111,25 +100,15 @@ export default function AdminDashboard({ navigate, onLogout }) {
   // ── Delete ───────────────────────────────────────────────
   const del = async (type, id) => {
     if (!window.confirm("Delete this record?")) return;
-
     const endpoints = {
       hotel: `${API_BASE}/hotels/`,
       room: `${API_BASE}/rooms/`,
       client: `${API_BASE}/clients/`,
       booking: `${API_BASE}/bookings/`,
     };
-
     try {
-      const res = await fetch(`${endpoints[type]}${id}/`, {
-        method: "DELETE",
-        headers,
-      });
-
-      if (!res.ok && res.status !== 204) {
-        alert("Delete failed.");
-        return;
-      }
-
+      const res = await fetch(`${endpoints[type]}${id}/`, { method: "DELETE", headers });
+      if (!res.ok && res.status !== 204) { alert("Delete failed."); return; }
       await fetchAll();
     } catch (err) {
       alert("Network error.");
@@ -140,13 +119,12 @@ export default function AdminDashboard({ navigate, onLogout }) {
   const getRoom = (id) => rooms.find(r => r.id === id);
   const getHotel = (id) => hotels.find(h => h.id === id);
 
-  // ── Loading / Error states ───────────────────────────────
+  // ── Loading / Error ──────────────────────────────────────
   if (loading) return (
     <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
       LOADING...
     </div>
   );
-
   if (error) return (
     <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c97b6e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "2px", textAlign: "center", padding: "40px" }}>
       {error}
@@ -185,23 +163,18 @@ export default function AdminDashboard({ navigate, onLogout }) {
             <h1 style={styles.pageTitle}>Overview</h1>
             <div style={styles.statsGrid}>
               {[
-                { label: "Hotels", value: hotels.length, icon: "🏨", color: "#c9a96e" },
-                { label: "Rooms", value: rooms.length, icon: "🛏️", color: "#7eb87e" },
-                { label: "Clients", value: clients.length, icon: "👤", color: "#6a9fb5" },
-                { label: "Bookings", value: bookings.length, icon: "📋", color: "#c97b6e" },
-                { label: "Confirmed", value: bookings.filter(b => b.status === "confirmed").length, icon: "✓", color: "#7eb87e" },
-                { label: "Cancelled", value: bookings.filter(b => b.status === "cancelled").length, icon: "✕", color: "#c97b6e" },
-                { label: "Rescheduled", value: bookings.filter(b => b.status === "rescheduled").length, icon: "↻", color: "#c9a96e" },
-                { label: "Available Rooms", value: rooms.filter(r => r.is_available).length, icon: "🟢", color: "#7eb87e" },
-                {
-                  label: "Total Revenue",
-                  value: "₱" + bookings
-                    .filter(b => b.status === "confirmed" || b.status === "rescheduled")
-                    .reduce((a, b) => a + parseFloat(b.total_price || 0), 0)
-                    .toLocaleString(),
-                  icon: "₱",
-                  color: "#c9a96e"
-                },
+                { label: "Hotels",         value: hotels.length,                                               icon: "🏨", color: "#c9a96e" },
+                { label: "Rooms",          value: rooms.length,                                                icon: "🛏️", color: "#7eb87e" },
+                { label: "Clients",        value: clients.length,                                              icon: "👤", color: "#6a9fb5" },
+                { label: "Bookings",       value: bookings.length,                                             icon: "📋", color: "#c97b6e" },
+                { label: "Confirmed",      value: bookings.filter(b => b.status === "confirmed").length,       icon: "✓",  color: "#7eb87e" },
+                { label: "Cancelled",      value: bookings.filter(b => b.status === "cancelled").length,       icon: "✕",  color: "#c97b6e" },
+                { label: "Rescheduled",    value: bookings.filter(b => b.status === "rescheduled").length,     icon: "↻",  color: "#c9a96e" },
+                { label: "Available Rooms",value: rooms.filter(r => r.is_available).length,                   icon: "🟢", color: "#7eb87e" },
+                { label: "Total Revenue",
+                  value: "₱" + bookings.filter(b => b.status === "confirmed" || b.status === "rescheduled")
+                    .reduce((a, b) => a + parseFloat(b.total_price || 0), 0).toLocaleString(),
+                  icon: "₱", color: "#c9a96e" },
               ].map((s, i) => (
                 <div key={i} style={styles.statCard}>
                   <span style={styles.statIcon}>{s.icon}</span>
@@ -214,9 +187,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
             <h2 style={styles.sectionTitle}>Recent Bookings</h2>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead>
-                  <tr>{["Guest", "Room", "Check-in", "Check-out", "Status", "Total"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
-                </thead>
+                <thead><tr>{["Guest","Room","Check-in","Check-out","Status","Total"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {bookings.slice(0, 5).map(b => (
                     <tr key={b.id} style={styles.tr}>
@@ -224,11 +195,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                       <td style={styles.td}>{b.room_number ? `Room ${b.room_number}` : getRoom(b.room) ? `Room ${getRoom(b.room).room_number}` : "—"}</td>
                       <td style={styles.td}>{b.check_in}</td>
                       <td style={styles.td}>{b.check_out}</td>
-                      <td style={styles.td}>
-                        <span style={{ color: statusColor[b.status], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>
-                          {b.status}
-                        </span>
-                      </td>
+                      <td style={styles.td}><span style={{ color: statusColor[b.status], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>{b.status}</span></td>
                       <td style={{ ...styles.td, color: "#c9a96e" }}>₱{parseFloat(b.total_price || 0).toLocaleString()}</td>
                     </tr>
                   ))}
@@ -247,9 +214,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead>
-                  <tr>{["Name", "Address", "Phone", "Email", "Rooms", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
-                </thead>
+                <thead><tr>{["Name","Address","Phone","Email","Rooms","Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {hotels.map(h => (
                     <tr key={h.id} style={styles.tr}>
@@ -279,26 +244,16 @@ export default function AdminDashboard({ navigate, onLogout }) {
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead>
-                  <tr>{["Hotel", "Room #", "Type", "Price/Night", "Capacity", "Available", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
-                </thead>
+                <thead><tr>{["Hotel","Room #","Type","Price/Night","Capacity","Available","Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {rooms.map(r => (
                     <tr key={r.id} style={styles.tr}>
                       <td style={styles.td}>{r.hotel_name || getHotel(r.hotel)?.name || "—"}</td>
                       <td style={{ ...styles.td, color: "#e8dcc8" }}>Room {r.room_number}</td>
-                      <td style={styles.td}>
-                        <span style={{ color: roomTypeColor[r.room_type], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>
-                          {r.room_type}
-                        </span>
-                      </td>
+                      <td style={styles.td}><span style={{ color: roomTypeColor[r.room_type], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>{r.room_type}</span></td>
                       <td style={{ ...styles.td, color: "#c9a96e" }}>₱{parseFloat(r.price_per_night).toLocaleString()}</td>
                       <td style={styles.td}>{r.capacity}</td>
-                      <td style={styles.td}>
-                        <span style={{ color: r.is_available ? "#7eb87e" : "#c97b6e", fontSize: "11px", fontFamily: "'Jost',sans-serif", textTransform: "uppercase", letterSpacing: "1px" }}>
-                          {r.is_available ? "Yes" : "No"}
-                        </span>
-                      </td>
+                      <td style={styles.td}><span style={{ color: r.is_available ? "#7eb87e" : "#c97b6e", fontSize: "11px", fontFamily: "'Jost',sans-serif", textTransform: "uppercase", letterSpacing: "1px" }}>{r.is_available ? "Yes" : "No"}</span></td>
                       <td style={styles.td}>
                         <button style={styles.editBtn} onClick={() => openEdit("room", r)}>Edit</button>
                         <button style={styles.delBtn} onClick={() => del("room", r.id)}>Delete</button>
@@ -320,9 +275,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead>
-                  <tr>{["Name", "Email", "Phone", "Joined", "Bookings", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
-                </thead>
+                <thead><tr>{["Name","Email","Phone","Joined","Bookings","Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {clients.map(c => (
                     <tr key={c.id} style={styles.tr}>
@@ -352,30 +305,18 @@ export default function AdminDashboard({ navigate, onLogout }) {
             </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
-                <thead>
-                  <tr>{["#", "Guest", "Room", "Check-in", "Check-out", "Status", "Total", "Notes", "Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr>
-                </thead>
+                <thead><tr>{["#","Guest","Room","Check-in","Check-out","Status","Total","Notes","Actions"].map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {bookings.map(b => (
                     <tr key={b.id} style={styles.tr}>
                       <td style={styles.td}>#{b.id}</td>
-                      <td style={{ ...styles.td, color: "#e8dcc8", fontFamily: "'Cormorant Garamond',serif", fontSize: "16px" }}>
-                        {b.client_name || getClient(b.client)?.name || "—"}
-                      </td>
-                      <td style={styles.td}>
-                        {b.room_number ? `Room ${b.room_number}` : getRoom(b.room) ? `Room ${getRoom(b.room).room_number}` : "—"}
-                      </td>
+                      <td style={{ ...styles.td, color: "#e8dcc8", fontFamily: "'Cormorant Garamond',serif", fontSize: "16px" }}>{b.client_name || getClient(b.client)?.name || "—"}</td>
+                      <td style={styles.td}>{b.room_number ? `Room ${b.room_number}` : getRoom(b.room) ? `Room ${getRoom(b.room).room_number}` : "—"}</td>
                       <td style={styles.td}>{b.check_in}</td>
                       <td style={styles.td}>{b.check_out}</td>
-                      <td style={styles.td}>
-                        <span style={{ color: statusColor[b.status], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>
-                          {b.status}
-                        </span>
-                      </td>
+                      <td style={styles.td}><span style={{ color: statusColor[b.status], fontFamily: "'Jost',sans-serif", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>{b.status}</span></td>
                       <td style={{ ...styles.td, color: "#c9a96e" }}>₱{parseFloat(b.total_price || 0).toLocaleString()}</td>
-                      <td style={{ ...styles.td, maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {b.notes || "—"}
-                      </td>
+                      <td style={{ ...styles.td, maxWidth: "120px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.notes || "—"}</td>
                       <td style={styles.td}>
                         <button style={styles.editBtn} onClick={() => openEdit("booking", b)}>Edit</button>
                         <button style={styles.delBtn} onClick={() => del("booking", b.id)}>Delete</button>
@@ -394,23 +335,19 @@ export default function AdminDashboard({ navigate, onLogout }) {
         <div style={styles.overlay} onClick={closeModal}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
             <div style={styles.modalHead}>
-              <h3 style={styles.modalTitle}>
-                {modal.mode === "add" ? "Add" : "Edit"} {modal.type.charAt(0).toUpperCase() + modal.type.slice(1)}
-              </h3>
+              <h3 style={styles.modalTitle}>{modal.mode === "add" ? "Add" : "Edit"} {modal.type.charAt(0).toUpperCase() + modal.type.slice(1)}</h3>
               <button style={styles.closeBtn} onClick={closeModal}>✕</button>
             </div>
             <div style={styles.modalBody}>
 
               {/* Hotel Form */}
               {modal.type === "hotel" && (
-                <>
-                  {[["name", "Hotel Name", "text"], ["address", "Address", "text"], ["phone", "Phone", "text"], ["email", "Email", "email"]].map(([k, l, t]) => (
-                    <div key={k} style={styles.field}>
-                      <label style={styles.fieldLabel}>{l}</label>
-                      <input style={styles.input} type={t} value={form[k] || ""} onChange={e => setForm({ ...form, [k]: e.target.value })} />
-                    </div>
-                  ))}
-                </>
+                <>{[["name","Hotel Name","text"],["address","Address","text"],["phone","Phone","text"],["email","Email","email"]].map(([k,l,t]) => (
+                  <div key={k} style={styles.field}>
+                    <label style={styles.fieldLabel}>{l}</label>
+                    <input style={styles.input} type={t} value={form[k] || ""} onChange={e => setForm({ ...form, [k]: e.target.value })} />
+                  </div>
+                ))}</>
               )}
 
               {/* Room Form */}
@@ -423,7 +360,7 @@ export default function AdminDashboard({ navigate, onLogout }) {
                       {hotels.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                     </select>
                   </div>
-                  {[["room_number", "Room Number", "text"], ["price_per_night", "Price/Night", "number"], ["capacity", "Capacity", "number"], ["description", "Description", "text"]].map(([k, l, t]) => (
+                  {[["room_number","Room Number","text"],["price_per_night","Price/Night","number"],["capacity","Capacity","number"],["description","Description","text"]].map(([k,l,t]) => (
                     <div key={k} style={styles.field}>
                       <label style={styles.fieldLabel}>{l}</label>
                       <input style={styles.input} type={t} value={form[k] || ""} onChange={e => setForm({ ...form, [k]: e.target.value })} />
@@ -433,12 +370,13 @@ export default function AdminDashboard({ navigate, onLogout }) {
                     <label style={styles.fieldLabel}>Room Type</label>
                     <select style={styles.input} value={form.room_type || ""} onChange={e => setForm({ ...form, room_type: e.target.value })}>
                       <option value="">Select type</option>
-                      {["single", "double", "suite", "deluxe"].map(t => <option key={t} value={t}>{t}</option>)}
+                      {["single","double","suite","deluxe"].map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
                   <div style={styles.field}>
                     <label style={styles.fieldLabel}>Available</label>
-                    <select style={styles.input} value={form.is_available === undefined ? "true" : String(form.is_available)} onChange={e => setForm({ ...form, is_available: e.target.value })}>  <option value="true">Yes</option>
+                    <select style={styles.input} value={form.is_available === undefined ? "true" : String(form.is_available)} onChange={e => setForm({ ...form, is_available: e.target.value })}>
+                      <option value="true">Yes</option>
                       <option value="false">No</option>
                     </select>
                   </div>
@@ -447,14 +385,12 @@ export default function AdminDashboard({ navigate, onLogout }) {
 
               {/* Client Form */}
               {modal.type === "client" && (
-                <>
-                  {[["name", "Full Name", "text"], ["email", "Email", "email"], ["phone", "Phone", "text"]].map(([k, l, t]) => (
-                    <div key={k} style={styles.field}>
-                      <label style={styles.fieldLabel}>{l}</label>
-                      <input style={styles.input} type={t} value={form[k] || ""} onChange={e => setForm({ ...form, [k]: e.target.value })} />
-                    </div>
-                  ))}
-                </>
+                <>{[["name","Full Name","text"],["email","Email","email"],["phone","Phone","text"]].map(([k,l,t]) => (
+                  <div key={k} style={styles.field}>
+                    <label style={styles.fieldLabel}>{l}</label>
+                    <input style={styles.input} type={t} value={form[k] || ""} onChange={e => setForm({ ...form, [k]: e.target.value })} />
+                  </div>
+                ))}</>
               )}
 
               {/* Booking Form */}
@@ -471,20 +407,16 @@ export default function AdminDashboard({ navigate, onLogout }) {
                     <label style={styles.fieldLabel}>Room</label>
                     <select style={styles.input} value={form.room || ""} onChange={e => setForm({ ...form, room: e.target.value })}>
                       <option value="">Select room</option>
-                      {rooms.map(r => (
-                        <option key={r.id} value={r.id}>
-                          Room {r.room_number} — {r.hotel_name || getHotel(r.hotel)?.name}
-                        </option>
-                      ))}
+                      {rooms.map(r => <option key={r.id} value={r.id}>Room {r.room_number} — {r.hotel_name || getHotel(r.hotel)?.name}</option>)}
                     </select>
                   </div>
                   <div style={styles.field}>
                     <label style={styles.fieldLabel}>Status</label>
                     <select style={styles.input} value={form.status || "confirmed"} onChange={e => setForm({ ...form, status: e.target.value })}>
-                      {["confirmed", "cancelled", "rescheduled"].map(s => <option key={s} value={s}>{s}</option>)}
+                      {["confirmed","cancelled","rescheduled"].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
-                  {[["check_in", "Check-in", "date"], ["check_out", "Check-out", "date"]].map(([k, l, t]) => (
+                  {[["check_in","Check-in","date"],["check_out","Check-out","date"]].map(([k,l,t]) => (
                     <div key={k} style={styles.field}>
                       <label style={styles.fieldLabel}>{l}</label>
                       <input style={styles.input} type={t} value={form[k] || ""} onChange={e => setForm({ ...form, [k]: e.target.value })} />

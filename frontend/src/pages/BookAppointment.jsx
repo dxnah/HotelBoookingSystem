@@ -12,7 +12,6 @@ function loadjsPDF() {
   });
 }
 
-// ── Photo Carousel ────────────────────────────────────────────────────
 const ROOM_IMAGES = {
   single: [
     "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=80",
@@ -66,7 +65,6 @@ const carouselBtn = (side) => ({
   display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2,
 });
 
-// ── QR Code ───────────────────────────────────────────────────────────
 function QRCode({ value, size = 140 }) {
   return (
     <img
@@ -76,32 +74,26 @@ function QRCode({ value, size = 140 }) {
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────
 export default function BookAppointment({ navigate, goBack, previousPage }) {
   const [step, setStep] = useState(1);
 
-  // Real data from API
   const [hotels, setHotels] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState(null);
 
-  // Selections
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [selectedRoomType, setSelectedRoomType] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
 
-  // Form
   const [form, setForm] = useState({ name: "", email: "", phone: "", guests: "", check_in: "", check_out: "", notes: "" });
 
-  // Submission
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [createdBooking, setCreatedBooking] = useState(null);
   const [bookingRefState] = useState(() => Math.random().toString(36).slice(2, 8).toUpperCase());
 
-  // ── Fetch hotels and rooms on mount ─────────────────────────────────
   useEffect(() => {
     const fetchData = async () => {
       setLoadingData(true);
@@ -121,16 +113,9 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     fetchData();
   }, []);
 
-  // ── Derived data ─────────────────────────────────────────────────────
-  const roomsForHotel = selectedHotel
-    ? rooms.filter(r => r.hotel === selectedHotel.id)
-    : [];
-
+  const roomsForHotel = selectedHotel ? rooms.filter(r => r.hotel === selectedHotel.id) : [];
   const roomTypes = [...new Set(roomsForHotel.map(r => r.room_type))];
-
-  const roomsOfType = selectedRoomType
-    ? roomsForHotel.filter(r => r.room_type === selectedRoomType)
-    : [];
+  const roomsOfType = selectedRoomType ? roomsForHotel.filter(r => r.room_type === selectedRoomType) : [];
 
   const nights = form.check_in && form.check_out
     ? Math.max(0, (new Date(form.check_out) - new Date(form.check_in)) / (1000 * 60 * 60 * 24))
@@ -143,16 +128,11 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     ? `Grand Velour Booking | Ref: ${bookingRef} | Guest: ${form.name} | Hotel: ${selectedHotel?.name} | Room: ${selectedRoom?.room_number} | Check-in: ${form.check_in} | Check-out: ${form.check_out} | Total: PHP ${totalPrice.toLocaleString()}`
     : "";
 
-  // ── Submit booking ───────────────────────────────────────────────────
   const handleSubmit = async () => {
     setSubmitting(true);
     setSubmitError(null);
-
     try {
-      // Step 1: Create or find client
       let clientId = null;
-
-      // Try to create client (if email exists, handle gracefully)
       const clientRes = await fetch(`${API_BASE}/clients/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -162,12 +142,10 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
           phone: form.phone,
         }),
       });
-
       if (clientRes.ok) {
         const clientData = await clientRes.json();
         clientId = clientData.id;
       } else {
-        // Client might already exist — fetch by email
         const allClients = await fetch(`${API_BASE}/clients/`).then(r => r.json());
         const existing = allClients.find(c => c.email === form.email);
         if (existing) {
@@ -178,8 +156,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
           return;
         }
       }
-
-      // Step 2: Create booking
       const bookingRes = await fetch(`${API_BASE}/bookings/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -192,17 +168,13 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
           notes: form.notes,
         }),
       });
-
       if (!bookingRes.ok) {
         const errData = await bookingRes.json();
-        const msg = typeof errData === "object"
-          ? Object.values(errData).flat().join(" ")
-          : "Booking failed.";
+        const msg = typeof errData === "object" ? Object.values(errData).flat().join(" ") : "Booking failed.";
         setSubmitError(msg);
         setSubmitting(false);
         return;
       }
-
       const bookingData = await bookingRes.json();
       setCreatedBooking(bookingData);
       setSubmitted(true);
@@ -213,11 +185,9 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     }
   };
 
-  // ── PDF Receipt ──────────────────────────────────────────────────────
   const handleDownloadReceipt = async () => {
     const jsPDF = await loadjsPDF();
     const issueDate = new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" });
-
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "legal" });
     const W = doc.internal.pageSize.getWidth();
     const H = doc.internal.pageSize.getHeight();
@@ -243,11 +213,9 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setTextColor(154, 138, 120);
     doc.text("HOTELS & RESORTS  ·  PHILIPPINES", W / 2, y, { align: "center" });
     y += 5;
-
     doc.setDrawColor(224, 216, 204);
     doc.line(14, y, W - 14, y);
     y += 5;
-
     doc.setFont("times", "italic");
     doc.setFontSize(10);
     doc.setTextColor(201, 169, 110);
@@ -304,14 +272,12 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
       ["Phone", form.phone],
       ["Number of Guests", `${form.guests} person${Number(form.guests) > 1 ? "s" : ""}`],
     ]);
-
     drawSection("RESERVATION DETAILS", [
       ["Hotel", selectedHotel?.name],
       ["Address", selectedHotel?.address],
       ["Room Number", `Room ${selectedRoom?.room_number}`],
       ["Room Type", selectedRoom?.room_type],
     ]);
-
     drawSection("STAY DETAILS", [
       ["Check-in", form.check_in],
       ["Check-out", form.check_out],
@@ -326,7 +292,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setDrawColor(240, 235, 227);
     doc.line(16, y + 2, W - 16, y + 2);
     y += 8;
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(154, 138, 120);
@@ -336,7 +301,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setTextColor(42, 32, 24);
     doc.text(`PHP ${parseFloat(selectedRoom?.price_per_night).toLocaleString()}`, W - 16, y, { align: "right" });
     y += 7;
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(154, 138, 120);
@@ -346,7 +310,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setTextColor(42, 32, 24);
     doc.text(String(nights), W - 16, y, { align: "right" });
     y += 5;
-
     doc.setDrawColor(200, 190, 178);
     doc.setLineDashPattern([1, 2], 0);
     doc.line(16, y, W - 16, y);
@@ -374,7 +337,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setTextColor(106, 95, 82);
     doc.text("Thank you for choosing Grand Velour.", W / 2, y, { align: "center" });
     y += 8;
-
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(176, 160, 144);
@@ -382,7 +344,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     y += 5;
     doc.text(selectedHotel?.address, W / 2, y, { align: "center" });
     y += 10;
-
     const stampText = "PRESENT THIS RECEIPT UPON CHECK-IN";
     const stampW = doc.getTextWidth(stampText) + 16;
     doc.setDrawColor(201, 169, 110);
@@ -391,20 +352,17 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.setFontSize(7.5);
     doc.setTextColor(201, 169, 110);
     doc.text(stampText, W / 2, y + 2.5, { align: "center" });
-
     doc.setFillColor(201, 169, 110);
     doc.rect(0, H - 4, W, 4, "F");
-
     doc.save(`GrandVelour_Receipt_${bookingRef}.pdf`);
   };
 
-  // ── Loading state ────────────────────────────────────────────────────
+  // ── Loading / Error ───────────────────────────────────────────────────
   if (loadingData) return (
     <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
       LOADING...
     </div>
   );
-
   if (dataError) return (
     <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c97b6e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "2px", textAlign: "center", padding: "40px" }}>
       {dataError}
@@ -469,21 +427,57 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
 
   return (
     <div style={S.page}>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
-<style>{`
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
-    cursor: pointer;
-    opacity: 0.8;
-  }
-  input[type="date"] {
-    color-scheme: dark;
-  }
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"]::-webkit-outer-spin-button {
-    filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
-  }
-`}</style>
+      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+      <style>{`
+        .gv-input::placeholder { color: #4a4540; opacity: 1; }
+        .gv-input:focus { border-color: #c9a96e !important; border-left-color: #c9a96e !important; background: #1a1814 !important; outline: none; box-shadow: 0 0 0 1px rgba(201,169,110,0.15); }
+        .gv-input:hover { border-color: #5a5048 !important; }
+
+        /* Date input — match text color and placeholder to other fields */
+        input[type="date"] {
+          color-scheme: dark;
+          color: #e8dcc8;
+        }
+        input[type="date"]:not([value=""]):not([value]) {
+          color: #e8dcc8;
+        }
+        /* Style the mm/dd/yyyy placeholder text to match other placeholders */
+        input[type="date"]::-webkit-datetime-edit {
+          color: #4a4540;
+          font-family: 'Jost', sans-serif;
+          font-size: 15px;
+          padding: 0;
+        }
+        input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+          color: #4a4540;
+        }
+        input[type="date"]::-webkit-datetime-edit-text {
+          color: #4a4540;
+        }
+        input[type="date"]::-webkit-datetime-edit-month-field,
+        input[type="date"]::-webkit-datetime-edit-day-field,
+        input[type="date"]::-webkit-datetime-edit-year-field {
+          color: #4a4540;
+        }
+        /* Once a date is selected, show it in the normal input color */
+        input[type="date"].has-value::-webkit-datetime-edit-month-field,
+        input[type="date"].has-value::-webkit-datetime-edit-day-field,
+        input[type="date"].has-value::-webkit-datetime-edit-year-field,
+        input[type="date"].has-value::-webkit-datetime-edit-text {
+          color: #e8dcc8;
+        }
+        /* Calendar icon styled gold */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
+          cursor: pointer;
+          opacity: 0.7;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+          filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
+        }
+      `}</style>
+
       <nav style={S.nav}>
         <button style={S.backBtn} onClick={goBack}>
           ← {previousPage === "landing" || !previousPage ? "Back to Home" : "Back"}
@@ -491,7 +485,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         <div style={S.logo}>GRAND<span style={S.logoAccent}>VELOUR</span></div>
       </nav>
 
-      {/* Stepper */}
       <div style={S.stepper}>
         {["Select Hotel", "Choose Room", "Your Details", "Confirm"].map((label, i) => (
           <div key={i} style={S.stepItem}>
@@ -533,7 +526,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
           </div>
         )}
 
-        {/* ── STEP 2a: Room Type Selection ── */}
+        {/* ── STEP 2a: Room Type ── */}
         {step === 2 && !selectedRoomType && (
           <div style={S.stepContent}>
             <h2 style={S.stepTitle}>Choose a Room Type</h2>
@@ -643,45 +636,47 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         {step === 3 && (
           <div style={S.stepContent}>
             <h2 style={S.stepTitle}>Your Details</h2>
-            <div style={S.formGrid}>
-              <div>
-                <label style={S.label}>Full Name</label>
-                <input type="text" placeholder="Juan dela Cruz" value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })} style={S.input} />
-              </div>
-              <div>
-                <label style={S.label}>Email Address <span style={S.optionalBadge}>Optional</span></label>
-                <input type="email" placeholder="juan@email.com" value={form.email}
-                  onChange={e => setForm({ ...form, email: e.target.value })} style={S.input} />
-              </div>
-              <div>
-                <label style={S.label}>Phone Number</label>
-                <input type="tel" placeholder="09XX-XXX-XXXX" value={form.phone}
-                  onChange={e => setForm({ ...form, phone: e.target.value })} style={S.input} />
-              </div>
-              <div>
-                <label style={S.label}>Number of Guests</label>
-                <input type="number" placeholder={`1–${selectedRoom?.capacity}`} min="1" max={selectedRoom?.capacity}
-                  value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })} style={S.input} />
-                <p style={S.inputHint}>Room capacity: {selectedRoom?.capacity} person{selectedRoom?.capacity > 1 ? "s" : ""}</p>
-              </div>
-              <div>
-                <label style={S.label}>Check-in Date</label>
-                <input type="date" value={form.check_in}
-                  onChange={e => setForm({ ...form, check_in: e.target.value })}
-                  style={S.input} min={new Date().toISOString().split("T")[0]} />
-              </div>
-              <div>
-                <label style={S.label}>Check-out Date</label>
-                <input type="date" value={form.check_out}
-                  onChange={e => setForm({ ...form, check_out: e.target.value })}
-                  style={S.input} min={form.check_in || new Date().toISOString().split("T")[0]} />
-              </div>
-              <div style={{ gridColumn: "span 2" }}>
-                <label style={S.label}>Notes <span style={S.optionalBadge}>Optional</span></label>
-                <textarea placeholder="Any special requests..." value={form.notes}
-                  onChange={e => setForm({ ...form, notes: e.target.value })}
-                  style={{ ...S.input, height: "80px", resize: "vertical" }} />
+            <div style={S.formCard}>
+              <div style={S.formGrid}>
+                <div>
+                  <label style={S.label}>Full Name</label>
+                  <input type="text" placeholder="Juan dela Cruz" value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })} style={S.input} className="gv-input" />
+                </div>
+                <div>
+                  <label style={S.label}>Email Address <span style={S.optionalBadge}>Optional</span></label>
+                  <input type="email" placeholder="juan@email.com" value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })} style={S.input} className="gv-input" />
+                </div>
+                <div>
+                  <label style={S.label}>Phone Number</label>
+                  <input type="tel" placeholder="09XX-XXX-XXXX" value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })} style={S.input} className="gv-input" />
+                </div>
+                <div>
+                  <label style={S.label}>Number of Guests</label>
+                  <input type="number" placeholder={`1–${selectedRoom?.capacity}`} min="1" max={selectedRoom?.capacity}
+                    value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })} style={S.input} className="gv-input" />
+                  <p style={S.inputHint}>For safety compliance · Room capacity: {selectedRoom?.capacity} person{selectedRoom?.capacity > 1 ? "s" : ""}</p>
+                </div>
+                <div>
+                  <label style={S.label}>Check-in Date</label>
+                  <input type="date" value={form.check_in}
+                    onChange={e => { setForm({ ...form, check_in: e.target.value }); e.target.classList.toggle("has-value", !!e.target.value); }}
+                    style={S.input} className={`gv-input${form.check_in ? " has-value" : ""}`} min={new Date().toISOString().split("T")[0]} />
+                </div>
+                <div>
+                  <label style={S.label}>Check-out Date</label>
+                  <input type="date" value={form.check_out}
+                    onChange={e => { setForm({ ...form, check_out: e.target.value }); e.target.classList.toggle("has-value", !!e.target.value); }}
+                    style={S.input} className={`gv-input${form.check_out ? " has-value" : ""}`} min={form.check_in || new Date().toISOString().split("T")[0]} />
+                </div>
+                <div style={{ gridColumn: "span 2" }}>
+                  <label style={S.label}>Notes <span style={S.optionalBadge}>Optional</span></label>
+                  <textarea placeholder="Any special requests..." value={form.notes}
+                    onChange={e => setForm({ ...form, notes: e.target.value })}
+                    style={{ ...S.input, height: "80px", resize: "vertical" }} className="gv-input" />
+                </div>
               </div>
             </div>
             {nights > 0 && (
@@ -727,13 +722,11 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
                 </div>
               ))}
             </div>
-
             {submitError && (
               <div style={{ background: "rgba(201,123,110,0.1)", border: "1px solid rgba(201,123,110,0.3)", color: "#c97b6e", fontFamily: "'Jost',sans-serif", fontSize: "13px", padding: "12px 16px" }}>
                 ⚠ {submitError}
               </div>
             )}
-
             <div style={{ display: "flex", gap: "12px" }}>
               <button style={S.outlineBtn} onClick={() => setStep(3)} disabled={submitting}>← Back</button>
               <button style={{ ...S.primaryBtn, opacity: submitting ? 0.6 : 1 }} onClick={handleSubmit} disabled={submitting}>
@@ -799,12 +792,16 @@ const S = {
   roomCardMeta: { display: "flex", gap: "10px", flexWrap: "wrap", fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#6a5f52", marginBottom: "12px" },
   selectRoomBtn: { fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "1px", textTransform: "uppercase", color: "#6a5f52", border: "1px solid #2a2520", padding: "8px", textAlign: "center" },
   selectRoomBtnActive: { background: "rgba(201,169,110,0.12)", color: "#c9a96e", border: "1px solid #c9a96e" },
-  formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" },
-  label: { display: "flex", alignItems: "center", gap: "8px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", color: "#6a5f52", textTransform: "uppercase", marginBottom: "8px" },
-  optionalBadge: { fontSize: "9px", letterSpacing: "1px", color: "#4a3f32", border: "1px solid #2a2520", padding: "2px 7px", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" },
-  input: { width: "100%", background: "#111", border: "1px solid #2a2520", color: "#e8dcc8", padding: "12px 16px", fontFamily: "'Jost', sans-serif", fontSize: "14px", boxSizing: "border-box", outline: "none" },
-  inputHint: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#4a3f32", margin: "6px 0 0" },
-  priceSummary: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", border: "1px solid #2a2520", fontFamily: "'Jost', sans-serif", fontSize: "14px", color: "#8a7a68" },
+
+  // ── Enhanced form styles ──
+  formCard: { background: "#111", border: "1px solid #2a2520", padding: "32px" },
+  formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "28px 24px" },
+  label: { display: "flex", alignItems: "center", gap: "8px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", color: "#c9a96e", textTransform: "uppercase", marginBottom: "10px", fontWeight: 500 },
+  optionalBadge: { fontSize: "9px", letterSpacing: "1px", color: "#8a7a68", border: "1px solid #4a3f32", padding: "2px 7px", textTransform: "uppercase", fontFamily: "'Jost', sans-serif" },
+  input: { width: "100%", background: "#151412", border: "1px solid #3a3530", borderLeft: "3px solid #c9a96e", color: "#e8dcc8", padding: "13px 16px", fontFamily: "'Jost', sans-serif", fontSize: "15px", boxSizing: "border-box", outline: "none" },
+  inputHint: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#6a5f52", margin: "6px 0 0" },
+  priceSummary: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", border: "1px solid #3a3530", borderLeft: "3px solid #c9a96e", background: "#151412", fontFamily: "'Jost', sans-serif", fontSize: "14px", color: "#a09080" },
+
   confirmCard: { border: "1px solid #1e1a16", background: "#111", overflow: "hidden" },
   confirmSection: { padding: "20px 32px" },
   confirmDivider: { height: "1px", background: "#1e1a16" },
