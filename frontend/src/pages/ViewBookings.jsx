@@ -25,6 +25,9 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
   const [selected, setSelected] = useState(null);
   const [activeAction, setActiveAction] = useState(null);
 
+  // Edit form state — pre-filled from selected booking
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", notes: "" });
+
   useEffect(() => {
     const fetchBookings = async () => {
       setLoading(true);
@@ -58,9 +61,39 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
   const nights = (b) =>
     Math.max(0, (new Date(b.check_out) - new Date(b.check_in)) / (1000 * 60 * 60 * 24));
 
+  const openModal = async (b) => {
+    setSelected(b);
+    setActiveAction(null);
+    // Pre-fill edit form with existing data
+    setEditForm({
+      name: b.client_name || "",
+      email: "",
+      phone: "",
+      notes: b.notes || "",
+    });
+    // Fetch full client details to get email & phone
+    if (b.client) {
+      try {
+        const res = await fetch(`${API_BASE}/clients/${b.client}/`);
+        if (res.ok) {
+          const clientData = await res.json();
+          setEditForm({
+            name: clientData.name || b.client_name || "",
+            email: clientData.email && !clientData.email.includes("@grandvelour.com") ? clientData.email : "",
+            phone: clientData.phone || "",
+            notes: b.notes || "",
+          });
+        }
+      } catch (err) {
+        // fallback to booking data
+      }
+    }
+  };
+
   const closeModal = () => {
     setSelected(null);
     setActiveAction(null);
+    setEditForm({ name: "", email: "", phone: "", notes: "" });
   };
 
   if (loading) return (
@@ -145,7 +178,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                   </td>
                 </tr>
               ) : filtered.map(b => (
-                <tr key={b.id} style={styles.tr} onClick={() => { setSelected(b); setActiveAction(null); }}>
+                <tr key={b.id} style={styles.tr} onClick={() => openModal(b)}>
                   <td style={styles.td}>#{b.id}</td>
                   <td style={styles.td}>
                     <div style={styles.guestName}>{b.client_name || "—"}</div>
@@ -195,7 +228,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
             </div>
             <div style={styles.modalBody}>
 
-              {/* Booking Details — hidden when an action is active */}
+              {/* Booking Details */}
               {!activeAction && (
                 <>
                   {[
@@ -262,7 +295,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                     </div>
                   )}
 
-                  {/* Edit Profile Form */}
+                  {/* Edit Profile Form — pre-filled */}
                   {activeAction === "edit" && (
                     <div style={{ padding: "28px 32px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -271,17 +304,17 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                         {[
-                          ["editName", "Full Name", "text", selected.client_name],
-                          ["editEmail", "Email", "email", ""],
-                          ["editPhone", "Phone", "text", ""],
-                          ["editNotes", "Special Requests / Notes", "text", selected.notes || ""],
-                        ].map(([key, label, type, defaultVal]) => (
+                          { key: "name", label: "Full Name", type: "text" },
+                          { key: "email", label: "Email", type: "email" },
+                          { key: "phone", label: "Phone", type: "text" },
+                          { key: "notes", label: "Special Requests / Notes", type: "text" },
+                        ].map(({ key, label, type }) => (
                           <div key={key}>
                             <label style={{ display: "block", fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#6a5f52", textTransform: "uppercase", marginBottom: "6px" }}>{label}</label>
                             <input
                               type={type}
-                              id={`modal-${key}`}
-                              defaultValue={defaultVal}
+                              value={editForm[key]}
+                              onChange={e => setEditForm(prev => ({ ...prev, [key]: e.target.value }))}
                               style={{ width: "100%", background: "#0d0d0d", border: "1px solid #2a2520", color: "#e8dcc8", padding: "10px 14px", fontFamily: "'Jost',sans-serif", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
                             />
                           </div>
@@ -289,20 +322,16 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                         <button
                           style={{ background: "#6a9fb5", border: "none", color: "#0d0d0d", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer", fontWeight: 500, marginTop: "4px" }}
                           onClick={async () => {
-                            const newName = document.getElementById("modal-editName").value;
-                            const newEmail = document.getElementById("modal-editEmail").value;
-                            const newPhone = document.getElementById("modal-editPhone").value;
-                            const newNotes = document.getElementById("modal-editNotes").value;
                             const [clientRes, bookingRes] = await Promise.all([
                               fetch(`${API_BASE}/clients/${selected.client}/`, {
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ name: newName, email: newEmail, phone: newPhone }),
+                                body: JSON.stringify({ name: editForm.name, email: editForm.email, phone: editForm.phone }),
                               }),
                               fetch(`${API_BASE}/bookings/${selected.id}/`, {
                                 method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ notes: newNotes }),
+                                body: JSON.stringify({ notes: editForm.notes }),
                               }),
                             ]);
                             if (clientRes.ok && bookingRes.ok) {
@@ -311,7 +340,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                               setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, client_name: updatedClient.name, notes: updatedBooking.notes } : b));
                               setSelected(prev => ({ ...prev, client_name: updatedClient.name, notes: updatedBooking.notes }));
                               setActiveAction(null);
-                              alert("Profile updated!");
+                              alert("Profile updated successfully!");
                             } else {
                               alert("Could not update. Check your inputs.");
                             }
@@ -396,7 +425,6 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                       </button>
                     </div>
                   )}
-
                 </div>
               )}
             </div>

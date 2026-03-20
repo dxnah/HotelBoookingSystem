@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { API_BASE } from "../api";
 
-// Load jsPDF dynamically
 function loadjsPDF() {
   return new Promise((resolve) => {
     if (window.jspdf) { resolve(window.jspdf.jsPDF); return; }
@@ -76,18 +75,15 @@ function QRCode({ value, size = 140 }) {
 
 export default function BookAppointment({ navigate, goBack, previousPage }) {
   const [step, setStep] = useState(1);
-
   const [hotels, setHotels] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
   const [dataError, setDataError] = useState(null);
-
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [selectedRoomType, setSelectedRoomType] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
-
   const [form, setForm] = useState({ name: "", email: "", phone: "", guests: "", check_in: "", check_out: "", notes: "" });
-
+  const [formErrors, setFormErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -127,6 +123,26 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
   const qrData = createdBooking
     ? `Grand Velour Booking | Ref: ${bookingRef} | Guest: ${form.name} | Hotel: ${selectedHotel?.name} | Room: ${selectedRoom?.room_number} | Check-in: ${form.check_in} | Check-out: ${form.check_out} | Total: PHP ${totalPrice.toLocaleString()}`
     : "";
+
+  // ── Validation ────────────────────────────────────────────
+  const validateForm = () => {
+    const errors = {};
+
+    // Phone: numbers only (allow +, -, spaces)
+    if (!form.phone) {
+      errors.phone = "Phone number is required.";
+    } else if (!/^[0-9+\-\s]+$/.test(form.phone)) {
+      errors.phone = "Phone number must contain numbers only.";
+    }
+
+    // Email: must have @ if provided
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = "Please enter a valid email address.";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -357,7 +373,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     doc.save(`GrandVelour_Receipt_${bookingRef}.pdf`);
   };
 
-  // ── Loading / Error ───────────────────────────────────────────────────
   if (loadingData) return (
     <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
       LOADING...
@@ -369,7 +384,6 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     </div>
   );
 
-  // ── Success Screen ────────────────────────────────────────────────────
   if (submitted) {
     return (
       <div style={S.page}>
@@ -432,50 +446,20 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         .gv-input::placeholder { color: #4a4540; opacity: 1; }
         .gv-input:focus { border-color: #c9a96e !important; border-left-color: #c9a96e !important; background: #1a1814 !important; outline: none; box-shadow: 0 0 0 1px rgba(201,169,110,0.15); }
         .gv-input:hover { border-color: #5a5048 !important; }
-
-        /* Date input — match text color and placeholder to other fields */
-        input[type="date"] {
-          color-scheme: dark;
-          color: #e8dcc8;
-        }
-        input[type="date"]:not([value=""]):not([value]) {
-          color: #e8dcc8;
-        }
-        /* Style the mm/dd/yyyy placeholder text to match other placeholders */
-        input[type="date"]::-webkit-datetime-edit {
-          color: #4a4540;
-          font-family: 'Jost', sans-serif;
-          font-size: 15px;
-          padding: 0;
-        }
-        input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-          color: #4a4540;
-        }
-        input[type="date"]::-webkit-datetime-edit-text {
-          color: #4a4540;
-        }
+        input[type="date"] { color-scheme: dark; color: #e8dcc8; }
+        input[type="date"]::-webkit-datetime-edit { color: #4a4540; font-family: 'Jost', sans-serif; font-size: 15px; padding: 0; }
+        input[type="date"]::-webkit-datetime-edit-fields-wrapper { color: #4a4540; }
+        input[type="date"]::-webkit-datetime-edit-text { color: #4a4540; }
         input[type="date"]::-webkit-datetime-edit-month-field,
         input[type="date"]::-webkit-datetime-edit-day-field,
-        input[type="date"]::-webkit-datetime-edit-year-field {
-          color: #4a4540;
-        }
-        /* Once a date is selected, show it in the normal input color */
+        input[type="date"]::-webkit-datetime-edit-year-field { color: #4a4540; }
         input[type="date"].has-value::-webkit-datetime-edit-month-field,
         input[type="date"].has-value::-webkit-datetime-edit-day-field,
         input[type="date"].has-value::-webkit-datetime-edit-year-field,
-        input[type="date"].has-value::-webkit-datetime-edit-text {
-          color: #e8dcc8;
-        }
-        /* Calendar icon styled gold */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
-          cursor: pointer;
-          opacity: 0.7;
-        }
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-          filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
-        }
+        input[type="date"].has-value::-webkit-datetime-edit-text { color: #e8dcc8; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg); cursor: pointer; opacity: 0.7; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg); }
+        .gv-error { color: #c97b6e; font-family: 'Jost', sans-serif; font-size: 11px; margin: 5px 0 0; letter-spacing: 0.5px; }
       `}</style>
 
       <nav style={S.nav}>
@@ -499,12 +483,12 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
 
       <div style={S.content}>
 
-        {/* ── STEP 1: Select Hotel ── */}
+        {/* STEP 1 */}
         {step === 1 && (
           <div style={S.stepContent}>
             <h2 style={S.stepTitle}>Select a Hotel</h2>
             {hotels.length === 0 ? (
-              <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No hotels available. Please check back later.</p>
+              <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No hotels available.</p>
             ) : (
               <div style={S.hotelGrid}>
                 {hotels.map(hotel => (
@@ -526,13 +510,13 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
           </div>
         )}
 
-        {/* ── STEP 2a: Room Type ── */}
+        {/* STEP 2a: Room Type */}
         {step === 2 && !selectedRoomType && (
           <div style={S.stepContent}>
             <h2 style={S.stepTitle}>Choose a Room Type</h2>
             <p style={S.stepSubtitle}>at {selectedHotel?.name}</p>
             {roomTypes.length === 0 ? (
-              <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No rooms available for this hotel.</p>
+              <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No rooms available.</p>
             ) : (
               <div style={S.typeGrid}>
                 {roomTypes.map(type => {
@@ -572,7 +556,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
           </div>
         )}
 
-        {/* ── STEP 2b: Individual Rooms ── */}
+        {/* STEP 2b: Individual Rooms */}
         {step === 2 && selectedRoomType && (
           <div style={S.stepContent}>
             <button style={{ background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.2)", color: "#a09080", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "8px 16px", marginBottom: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
@@ -632,7 +616,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
           </div>
         )}
 
-        {/* ── STEP 3: Your Details ── */}
+        {/* STEP 3: Your Details */}
         {step === 3 && (
           <div style={S.stepContent}>
             <h2 style={S.stepTitle}>Your Details</h2>
@@ -641,22 +625,59 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
                 <div>
                   <label style={S.label}>Full Name</label>
                   <input type="text" placeholder="Juan dela Cruz" value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })} style={S.input} className="gv-input" />
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    style={S.input} className="gv-input" />
                 </div>
                 <div>
                   <label style={S.label}>Email Address <span style={S.optionalBadge}>Optional</span></label>
-                  <input type="email" placeholder="juan@email.com" value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })} style={S.input} className="gv-input" />
+                  <input
+                    type="text"
+                    placeholder="juan@email.com"
+                    value={form.email}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setForm({ ...form, email: val });
+                      // Real-time validation: must have @ if not empty
+                      if (val && !/^[^\s@]+@[^\s@]+/.test(val)) {
+                        setFormErrors(prev => ({ ...prev, email: "Email must contain @" }));
+                      } else {
+                        setFormErrors(prev => ({ ...prev, email: "" }));
+                      }
+                    }}
+                    style={{ ...S.input, ...(formErrors.email ? { borderColor: "#c97b6e" } : {}) }}
+                    className="gv-input"
+                  />
+                  {formErrors.email && <p className="gv-error">⚠ {formErrors.email}</p>}
                 </div>
                 <div>
                   <label style={S.label}>Phone Number</label>
-                  <input type="tel" placeholder="09XX-XXX-XXXX" value={form.phone}
-                    onChange={e => setForm({ ...form, phone: e.target.value })} style={S.input} className="gv-input" />
+                  <input
+                    type="tel"
+                    placeholder="09XX-XXX-XXXX"
+                    value={form.phone}
+                    onChange={e => {
+                      // Allow only numbers, +, -, spaces
+                      const val = e.target.value.replace(/[^0-9+\-\s]/g, "");
+                      setForm({ ...form, phone: val });
+                      if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: "" }));
+                    }}
+                    onKeyDown={e => {
+                      // Block letters and special chars except allowed keys
+                      const allowed = ["Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End","+","-"," "];
+                      if (!/[0-9]/.test(e.key) && !allowed.includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    style={{ ...S.input, ...(formErrors.phone ? { borderColor: "#c97b6e" } : {}) }}
+                    className="gv-input"
+                  />
+                  {formErrors.phone && <p className="gv-error">⚠ {formErrors.phone}</p>}
                 </div>
                 <div>
                   <label style={S.label}>Number of Guests</label>
                   <input type="number" placeholder={`1–${selectedRoom?.capacity}`} min="1" max={selectedRoom?.capacity}
-                    value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })} style={S.input} className="gv-input" />
+                    value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })}
+                    style={S.input} className="gv-input" />
                   <p style={S.inputHint}>For safety compliance · Room capacity: {selectedRoom?.capacity} person{selectedRoom?.capacity > 1 ? "s" : ""}</p>
                 </div>
                 <div>
@@ -688,16 +709,18 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
             <div style={{ display: "flex", gap: "12px" }}>
               <button style={S.outlineBtn} onClick={() => setStep(2)}>← Back</button>
               <button
-                style={{ ...S.primaryBtn, opacity: (form.name && form.phone && form.guests && form.check_in && form.check_out && nights > 0) ? 1 : 0.4 }}
-                disabled={!(form.name && form.phone && form.guests && form.check_in && form.check_out && nights > 0)}
-                onClick={() => setStep(4)}>
+                style={{ ...S.primaryBtn, opacity: (form.name && form.phone && form.guests && form.check_in && form.check_out && nights > 0 && !formErrors.email && !formErrors.phone) ? 1 : 0.4 }}
+                disabled={!(form.name && form.phone && form.guests && form.check_in && form.check_out && nights > 0 && !formErrors.email && !formErrors.phone)}
+                onClick={() => {
+                  if (validateForm()) setStep(4);
+                }}>
                 Continue →
               </button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 4: Confirm ── */}
+        {/* STEP 4: Confirm */}
         {step === 4 && (
           <div style={S.stepContent}>
             <h2 style={S.stepTitle}>Confirm Booking</h2>
@@ -792,8 +815,6 @@ const S = {
   roomCardMeta: { display: "flex", gap: "10px", flexWrap: "wrap", fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#6a5f52", marginBottom: "12px" },
   selectRoomBtn: { fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "1px", textTransform: "uppercase", color: "#6a5f52", border: "1px solid #2a2520", padding: "8px", textAlign: "center" },
   selectRoomBtnActive: { background: "rgba(201,169,110,0.12)", color: "#c9a96e", border: "1px solid #c9a96e" },
-
-  // ── Enhanced form styles ──
   formCard: { background: "#111", border: "1px solid #2a2520", padding: "32px" },
   formGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "28px 24px" },
   label: { display: "flex", alignItems: "center", gap: "8px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", color: "#c9a96e", textTransform: "uppercase", marginBottom: "10px", fontWeight: 500 },
@@ -801,7 +822,6 @@ const S = {
   input: { width: "100%", background: "#151412", border: "1px solid #3a3530", borderLeft: "3px solid #c9a96e", color: "#e8dcc8", padding: "13px 16px", fontFamily: "'Jost', sans-serif", fontSize: "15px", boxSizing: "border-box", outline: "none" },
   inputHint: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#6a5f52", margin: "6px 0 0" },
   priceSummary: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 24px", border: "1px solid #3a3530", borderLeft: "3px solid #c9a96e", background: "#151412", fontFamily: "'Jost', sans-serif", fontSize: "14px", color: "#a09080" },
-
   confirmCard: { border: "1px solid #1e1a16", background: "#111", overflow: "hidden" },
   confirmSection: { padding: "20px 32px" },
   confirmDivider: { height: "1px", background: "#1e1a16" },
