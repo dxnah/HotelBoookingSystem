@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hotel, Room, Client, Booking
+from .models import Hotel, Room, Client, Booking, User
 
 
 class HotelSerializer(serializers.ModelSerializer):
@@ -36,14 +36,12 @@ class BookingSerializer(serializers.ModelSerializer):
         check_out = data.get('check_out')
         room = data.get('room')
 
-        # Check out must be after check in
         if check_in and check_out:
             if check_out <= check_in:
                 raise serializers.ValidationError(
                     "Check-out date must be after check-in date."
                 )
 
-        # Conflict detection — same room, overlapping dates
         if room and check_in and check_out:
             overlapping = Booking.objects.filter(
                 room=room,
@@ -52,7 +50,6 @@ class BookingSerializer(serializers.ModelSerializer):
                 check_out__gt=check_in,
             )
 
-            # Exclude self when updating
             if self.instance:
                 overlapping = overlapping.exclude(pk=self.instance.pk)
 
@@ -62,3 +59,30 @@ class BookingSerializer(serializers.ModelSerializer):
                 )
 
         return data
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'last_name', 'address', 'age', 'birthday', 'phone', 'password']
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class UserLoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'first_name', 'last_name', 'address', 'age', 'birthday', 'phone', 'date_joined']
+        read_only_fields = ['email', 'date_joined']
