@@ -105,29 +105,32 @@ export default function LandingPage({ navigate, onAdminClick, scrollToFeatures, 
         .feature-card-hover:hover .feature-link-inner { color: #e8dcc8; }
       `}</style>
 
+      {/* NAVBAR */}
       <nav style={styles.nav}>
         <div style={styles.logo}>GRAND<span style={styles.logoAccent}>VELOUR</span></div>
         <div style={styles.navLinks}>
-          <button style={styles.navLink} onClick={() => navigate("about")}>About Us</button>
-          <button style={styles.navLink} onClick={() => navigate("floormap")}>Floor Map</button>
-          <button style={styles.navLink} onClick={() => navigate("bookings")}>My Bookings</button>
           {isUserAuthenticated ? (
-            <button style={styles.navBtn} onClick={() => navigate("userprofile")}>👤 My Account</button>
+            <>
+              <button style={styles.navLink} onClick={() => navigate("about")}>About Us</button>
+              <button style={styles.navLink} onClick={() => navigate("floormap")}>Floor Map</button>
+              <button style={styles.navLink} onClick={() => navigate("bookings")}>My Bookings</button>
+              <button style={styles.navBtn} onClick={() => navigate("userprofile")}>👤 My Account</button>
+              <button style={styles.navBtn} onClick={onAdminClick || (() => navigate("admin"))}>Admin</button>
+            </>
           ) : (
-            <button style={styles.navLink} onClick={() => navigate("userlogin")}>Sign In</button>
+            <>
+              <button style={styles.navBtn} onClick={() => navigate("userlogin")}>Sign In</button>
+              <button style={styles.navBtn} onClick={onAdminClick || (() => navigate("admin"))}>Admin</button>
+            </>
           )}
-          <button style={styles.navBtn} onClick={onAdminClick || (() => navigate("admin"))}>Admin</button>
         </div>
       </nav>
 
+      {/* HERO */}
       <section style={styles.hero}>
-        {/* Hotel lobby background image */}
         <div style={styles.heroBg} />
-        {/* Dark overlay for readability */}
         <div style={styles.heroOverlay} />
-        {/* Bottom gradient fade */}
         <div style={styles.heroFade} />
-        {/* Particles on top */}
         <ParticleCanvas />
 
         <div style={styles.heroContent}>
@@ -138,28 +141,55 @@ export default function LandingPage({ navigate, onAdminClick, scrollToFeatures, 
             Experience world-class hospitality in the heart of the city.
             Book your room today and indulge in unparalleled comfort.
           </p>
-          <div style={styles.heroBtns}>
-            <button style={styles.heroBtn} onClick={() => navigate("book")}>Reserve a Room</button>
-            <button style={styles.heroBtnOutline} onClick={() => navigate("rooms")}>Our Accommodations</button>
-          </div>
+
+          {isUserAuthenticated ? (
+            <div style={styles.heroBtns}>
+              <button style={styles.heroBtn} onClick={() => navigate("book")}>Reserve a Room</button>
+              <button style={styles.heroBtnOutline} onClick={() => navigate("rooms")}>Our Accommodations</button>
+            </div>
+          ) : (
+            <div style={styles.heroBtns}>
+              <button style={styles.heroBtn} onClick={() => navigate("userlogin")}>Sign In</button>
+            </div>
+          )}
+
           <div style={styles.heroAboutWrap}>
             <button style={styles.heroAboutBtn} onClick={() => navigate("about")}>✦ Discover Our Story ✦</button>
           </div>
         </div>
       </section>
 
+      {/* FEATURES */}
       <section style={styles.featuresSection} id="features">
         {features.map((f, i) => (
-          <div key={i} className="feature-card-hover" style={styles.featureCard} onClick={() => navigate("feature", f)}>
+          <div
+            key={i}
+            className={isUserAuthenticated ? "feature-card-hover" : ""}
+            style={{
+              ...styles.featureCard,
+              cursor: isUserAuthenticated ? "pointer" : "default",
+              opacity: isUserAuthenticated ? 1 : 0.55,
+            }}
+            onClick={isUserAuthenticated ? () => navigate("feature", f) : undefined}
+          >
             <div style={styles.featureImgWrap}>
               <img className="feature-img-inner" src={f.image} alt={f.title} style={styles.featureImg} />
               <div style={styles.featureImgOverlay} />
+              {!isUserAuthenticated && (
+                <div style={styles.lockedOverlay}>
+                  <span style={{ fontSize: "26px" }}>🔒</span>
+                </div>
+              )}
             </div>
             <div style={styles.featureBody}>
               <span style={styles.featureIcon}>{f.icon}</span>
               <h4 style={styles.featureTitle}>{f.title}</h4>
               <p style={styles.featureDesc}>{f.desc}</p>
-              <span className="feature-link-inner" style={styles.featureLink}>Learn more →</span>
+              {isUserAuthenticated ? (
+                <span className="feature-link-inner" style={styles.featureLink}>Learn more →</span>
+              ) : (
+                <span style={{ fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#3a3530", letterSpacing: "2px", textTransform: "uppercase" }}>Sign in to explore</span>
+              )}
             </div>
           </div>
         ))}
@@ -180,20 +210,15 @@ const styles = {
   navLinks: { display: "flex", gap: "20px", alignItems: "center" },
   navLink: { background: "none", border: "none", color: "#a09080", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "13px", letterSpacing: "2px", textTransform: "uppercase" },
   navBtn: { background: "none", border: "1px solid #c9a96e", color: "#c9a96e", cursor: "pointer", padding: "8px 20px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase" },
-
   hero: { position: "relative", minHeight: "calc(100vh - 73px)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", overflow: "hidden", paddingBottom: "80px" },
-
-  // Hotel lobby/entrance background
   heroBg: {
     position: "absolute", inset: 0, zIndex: 0,
     backgroundImage: "url('https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1600&q=80')",
     backgroundSize: "cover", backgroundPosition: "center",
-    transform: "scale(1.03)",
-    filter: "brightness(0.5)",
+    transform: "scale(1.03)", filter: "brightness(0.5)",
   },
   heroOverlay: { position: "absolute", inset: 0, zIndex: 1, background: "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(13,13,13,0.65) 60%, rgba(13,13,13,0.95) 100%)" },
   heroFade: { position: "absolute", bottom: 0, left: 0, right: 0, height: "120px", zIndex: 1, background: "linear-gradient(to bottom, transparent, #0d0d0d)" },
-
   heroContent: { maxWidth: "700px", position: "relative", zIndex: 3, textAlign: "center", padding: "0 20px" },
   hotelName: { fontFamily: "'Cormorant Garamond', serif", fontSize: "64px", fontWeight: 300, letterSpacing: "20px", color: "#c9a96e", margin: "0 0 12px", lineHeight: 1, textTransform: "uppercase", textShadow: "0 2px 30px rgba(0,0,0,0.5)" },
   heroSub: { fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "5px", color: "#a09070", marginBottom: "16px", textTransform: "uppercase" },
@@ -204,12 +229,12 @@ const styles = {
   heroBtnOutline: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(201,169,110,0.7)", color: "#c9a96e", padding: "16px 40px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", cursor: "pointer", backdropFilter: "blur(4px)" },
   heroAboutWrap: { marginTop: "28px", display: "flex", justifyContent: "center" },
   heroAboutBtn: { background: "none", border: "none", color: "#7a6f62", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #3a3530" },
-
   featuresSection: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderTop: "1px solid #1e1a16" },
-  featureCard: { cursor: "pointer", overflow: "hidden", borderRight: "1px solid #1e1a16", borderBottom: "1px solid #1e1a16" },
+  featureCard: { overflow: "hidden", borderRight: "1px solid #1e1a16", borderBottom: "1px solid #1e1a16" },
   featureImgWrap: { position: "relative", height: "200px", overflow: "hidden" },
   featureImg: { width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.5s ease" },
   featureImgOverlay: { position: "absolute", inset: 0, background: "rgba(13,13,13,0.45)" },
+  lockedOverlay: { position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(13,13,13,0.5)", zIndex: 2 },
   featureBody: { padding: "28px 32px", background: "#0d0d0d" },
   featureIcon: { fontSize: "24px", display: "block", marginBottom: "12px" },
   featureTitle: { fontSize: "20px", fontWeight: 400, color: "#e8dcc8", margin: "0 0 8px" },
