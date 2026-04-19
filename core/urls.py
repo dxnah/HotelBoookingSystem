@@ -22,5 +22,5 @@ from appointments.views import CustomTokenObtainPairView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('appointments.urls')),
-    path('api/v1/auth/token/', CustomTokenObtainPairView.as_view()),
+    path('api/v1/auth/users/', CustomTokenObtainPairView.as_view()),
 ]
