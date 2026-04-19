@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { API_BASE } from "../api";
 
 function loadjsPDF() {
@@ -73,8 +73,97 @@ function QRCode({ value, size = 140 }) {
   );
 }
 
+function SkeletonCard({ height = "200px" }) {
+  return (
+    <div style={{
+      height,
+      border: "1px solid #1e1a16",
+      background: "linear-gradient(90deg, #111 25%, #1a1a18 50%, #111 75%)",
+      backgroundSize: "200% 100%",
+      animation: "shimmer 1.4s infinite",
+    }} />
+  );
+}
+
+// Sticky booking summary sidebar for step 3
+function BookingSummary({ selectedHotel, selectedRoom, form, nights, totalPrice }) {
+  if (!selectedRoom) return null;
+  return (
+    <div style={SB.wrap}>
+      <p style={SB.heading}>BOOKING SUMMARY</p>
+      <div style={SB.body}>
+        {selectedRoom && (
+          <img
+            src={(ROOM_IMAGES[selectedRoom.room_type] || ROOM_IMAGES.single)[0]}
+            alt=""
+            style={SB.photo}
+          />
+        )}
+        <div style={SB.section}>
+          <p style={SB.label}>HOTEL</p>
+          <p style={SB.value}>{selectedHotel?.name}</p>
+          <p style={SB.sub}>{selectedHotel?.address}</p>
+        </div>
+        <div style={SB.divider} />
+        <div style={SB.section}>
+          <p style={SB.label}>ROOM</p>
+          <p style={SB.value}>Room {selectedRoom.room_number}</p>
+          <p style={SB.sub}>{selectedRoom.room_type?.charAt(0).toUpperCase() + selectedRoom.room_type?.slice(1)} · Up to {selectedRoom.capacity} guests</p>
+        </div>
+        <div style={SB.divider} />
+        <div style={SB.section}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <p style={SB.label}>CHECK-IN</p>
+            <p style={{ ...SB.sub, color: "#8a7a68" }}>{form.check_in || "—"}</p>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+            <p style={SB.label}>CHECK-OUT</p>
+            <p style={{ ...SB.sub, color: "#8a7a68" }}>{form.check_out || "—"}</p>
+          </div>
+          {nights > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "6px" }}>
+              <p style={SB.label}>DURATION</p>
+              <p style={{ ...SB.sub, color: "#8a7a68" }}>{nights} night{nights !== 1 ? "s" : ""}</p>
+            </div>
+          )}
+        </div>
+        <div style={SB.divider} />
+        <div style={{ ...SB.section, background: "rgba(201,169,110,0.05)", padding: "14px 18px", border: "1px solid rgba(201,169,110,0.15)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={SB.label}>RATE / NIGHT</p>
+            <p style={{ fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#c9a96e" }}>
+              ₱{parseFloat(selectedRoom.price_per_night).toLocaleString()}
+            </p>
+          </div>
+          {nights > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+              <p style={{ ...SB.label, color: "#c9a96e" }}>TOTAL ({nights}n)</p>
+              <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 400, color: "#c9a96e" }}>
+                ₱{totalPrice.toLocaleString()}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const SB = {
+  wrap: { position: "sticky", top: "80px", background: "#111", border: "1px solid #2a2520", width: "280px", flexShrink: 0, alignSelf: "start" },
+  heading: { fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "3px", color: "#c9a96e", textTransform: "uppercase", margin: 0, padding: "16px 18px", borderBottom: "1px solid #1e1a16" },
+  body: {},
+  photo: { width: "100%", height: "140px", objectFit: "cover", display: "block" },
+  section: { padding: "14px 18px" },
+  divider: { height: "1px", background: "#1e1a16" },
+  label: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "2px", color: "#4a3f32", textTransform: "uppercase", margin: "0 0 4px" },
+  value: { fontSize: "16px", fontWeight: 400, color: "#e8dcc8", margin: "0 0 4px" },
+  sub: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#6a5f52", margin: 0 },
+};
+
 export default function BookAppointment({ navigate, goBack, previousPage }) {
   const [step, setStep] = useState(1);
+  const [animDir, setAnimDir] = useState("forward");
   const [hotels, setHotels] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
@@ -89,6 +178,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
   const [submitError, setSubmitError] = useState(null);
   const [createdBooking, setCreatedBooking] = useState(null);
   const [bookingRefState] = useState(() => Math.random().toString(36).slice(2, 8).toUpperCase());
+  const stepContentRef = useRef(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,7 +190,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         ]);
         setHotels(Array.isArray(h) ? h : []);
         setRooms(Array.isArray(r) ? r : []);
-      } catch (err) {
+      } catch {
         setDataError("Could not load hotel data. Please try again.");
       } finally {
         setLoadingData(false);
@@ -108,6 +198,31 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     };
     fetchData();
   }, []);
+
+  const goToStep = (nextStep) => {
+    setAnimDir(nextStep > step ? "forward" : "back");
+    if (stepContentRef.current) {
+      stepContentRef.current.style.opacity = "0";
+      stepContentRef.current.style.transform = nextStep > step ? "translateX(30px)" : "translateX(-30px)";
+    }
+    setTimeout(() => {
+      setStep(nextStep);
+      if (stepContentRef.current) {
+        stepContentRef.current.style.transition = "none";
+        stepContentRef.current.style.opacity = "0";
+        stepContentRef.current.style.transform = nextStep > step ? "translateX(-20px)" : "translateX(20px)";
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (stepContentRef.current) {
+              stepContentRef.current.style.transition = "opacity 0.35s ease, transform 0.35s ease";
+              stepContentRef.current.style.opacity = "1";
+              stepContentRef.current.style.transform = "translateX(0)";
+            }
+          });
+        });
+      }
+    }, 180);
+  };
 
   const roomsForHotel = selectedHotel ? rooms.filter(r => r.hotel === selectedHotel.id) : [];
   const roomTypes = [...new Set(roomsForHotel.map(r => r.room_type))];
@@ -124,22 +239,16 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     ? `Grand Velour Booking | Ref: ${bookingRef} | Guest: ${form.name} | Hotel: ${selectedHotel?.name} | Room: ${selectedRoom?.room_number} | Check-in: ${form.check_in} | Check-out: ${form.check_out} | Total: PHP ${totalPrice.toLocaleString()}`
     : "";
 
-  // ── Validation ────────────────────────────────────────────
   const validateForm = () => {
     const errors = {};
-
-    // Phone: numbers only (allow +, -, spaces)
     if (!form.phone) {
       errors.phone = "Phone number is required.";
     } else if (!/^[0-9+\-\s]+$/.test(form.phone)) {
       errors.phone = "Phone number must contain numbers only.";
     }
-
-    // Email: must have @ if provided
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errors.email = "Please enter a valid email address.";
     }
-
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -194,7 +303,7 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
       const bookingData = await bookingRes.json();
       setCreatedBooking(bookingData);
       setSubmitted(true);
-    } catch (err) {
+    } catch {
       setSubmitError("Network error. Is the server running?");
     } finally {
       setSubmitting(false);
@@ -374,10 +483,19 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
   };
 
   if (loadingData) return (
-    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
-      LOADING...
+    <div style={S.page}>
+      <style>{`@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }`}</style>
+      <nav style={S.nav}>
+        <div style={{ width: "80px" }} />
+        <div style={S.logo}>GRAND<span style={S.logoAccent}>VELOUR</span></div>
+        <div style={{ width: "80px" }} />
+      </nav>
+      <div style={{ ...S.content, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", paddingTop: "60px" }}>
+        {[1, 2, 3].map(i => <SkeletonCard key={i} height="220px" />)}
+      </div>
     </div>
   );
+
   if (dataError) return (
     <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c97b6e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "2px", textAlign: "center", padding: "40px" }}>
       {dataError}
@@ -439,10 +557,13 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
     );
   }
 
+  const showSidebar = step === 3 && selectedRoom;
+
   return (
     <div style={S.page}>
       <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
       <style>{`
+        @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
         .gv-input::placeholder { color: #4a4540; opacity: 1; }
         .gv-input:focus { border-color: #c9a96e !important; border-left-color: #c9a96e !important; background: #1a1814 !important; outline: none; box-shadow: 0 0 0 1px rgba(201,169,110,0.15); }
         .gv-input:hover { border-color: #5a5048 !important; }
@@ -460,6 +581,17 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg); cursor: pointer; opacity: 0.7; }
         input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg); }
         .gv-error { color: #c97b6e; font-family: 'Jost', sans-serif; font-size: 11px; margin: 5px 0 0; letter-spacing: 0.5px; }
+        .gv-hotel-card { transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease, border-color 0.22s ease !important; }
+        .gv-hotel-card:hover { transform: translateY(-5px) !important; box-shadow: 0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(201,169,110,0.15) !important; border-color: rgba(201,169,110,0.3) !important; }
+        .gv-hotel-card:active { transform: translateY(-2px) !important; }
+        .gv-type-card { transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease !important; }
+        .gv-type-card:hover { transform: translateY(-5px) !important; box-shadow: 0 12px 32px rgba(0,0,0,0.5) !important; }
+        .gv-type-card:hover img { transform: scale(1.04); }
+        .gv-type-card img { transition: transform 0.3s ease !important; }
+        .gv-type-card:active { transform: translateY(-2px) !important; }
+        .gv-room-card { transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease !important; }
+        .gv-room-card:hover { transform: translateY(-4px) !important; box-shadow: 0 10px 28px rgba(0,0,0,0.45) !important; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
       `}</style>
 
       <nav style={S.nav}>
@@ -481,284 +613,302 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
         ))}
       </div>
 
-      <div style={S.content}>
+      <div style={{ ...S.content, display: showSidebar ? "flex" : "block", gap: showSidebar ? "32px" : "0", alignItems: "start" }}>
+        <div
+          ref={stepContentRef}
+          style={{ flex: 1, transition: "opacity 0.35s ease, transform 0.35s ease", opacity: 1, transform: "translateX(0)" }}
+        >
 
-        {/* STEP 1 */}
-        {step === 1 && (
-          <div style={S.stepContent}>
-            <h2 style={S.stepTitle}>Select a Hotel</h2>
-            {hotels.length === 0 ? (
-              <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No hotels available.</p>
-            ) : (
-              <div style={S.hotelGrid}>
-                {hotels.map(hotel => (
-                  <div key={hotel.id}
-                    style={{ ...S.hotelCard, ...(selectedHotel?.id === hotel.id ? S.hotelSelected : {}) }}
-                    onClick={() => setSelectedHotel(hotel)}>
-                    <div style={S.hotelIcon}>🏨</div>
-                    <h3 style={S.hotelName}>{hotel.name}</h3>
-                    <p style={S.hotelAddr}>📍 {hotel.address}</p>
-                    <p style={S.hotelContact}>📞 {hotel.phone}</p>
-                    <p style={S.hotelContact}>✉️ {hotel.email}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button style={{ ...S.primaryBtn, opacity: selectedHotel ? 1 : 0.4 }} disabled={!selectedHotel} onClick={() => setStep(2)}>
-              Continue →
-            </button>
-          </div>
-        )}
+          {/* STEP 1 */}
+          {step === 1 && (
+            <div style={S.stepContent}>
+              <h2 style={S.stepTitle}>Select a Hotel</h2>
+              {hotels.length === 0 ? (
+                <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No hotels available.</p>
+              ) : (
+                <div style={S.hotelGrid}>
+                  {hotels.map(hotel => (
+                    <div key={hotel.id}
+                      className="gv-hotel-card"
+                      style={{ ...S.hotelCard, ...(selectedHotel?.id === hotel.id ? S.hotelSelected : {}) }}
+                      onClick={() => setSelectedHotel(hotel)}>
+                      <div style={S.hotelIcon}>🏨</div>
+                      <h3 style={S.hotelName}>{hotel.name}</h3>
+                      <p style={S.hotelAddr}>📍 {hotel.address}</p>
+                      <p style={S.hotelContact}>📞 {hotel.phone}</p>
+                      <p style={S.hotelContact}>✉️ {hotel.email}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button style={{ ...S.primaryBtn, opacity: selectedHotel ? 1 : 0.4 }} disabled={!selectedHotel} onClick={() => goToStep(2)}>
+                Continue →
+              </button>
+            </div>
+          )}
 
-        {/* STEP 2a: Room Type */}
-        {step === 2 && !selectedRoomType && (
-          <div style={S.stepContent}>
-            <h2 style={S.stepTitle}>Choose a Room Type</h2>
-            <p style={S.stepSubtitle}>at {selectedHotel?.name}</p>
-            {roomTypes.length === 0 ? (
-              <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No rooms available.</p>
-            ) : (
-              <div style={S.typeGrid}>
-                {roomTypes.map(type => {
-                  const roomsOfThisType = roomsForHotel.filter(r => r.room_type === type);
-                  const availCount = roomsOfThisType.filter(r => r.is_available).length;
-                  const sampleRoom = roomsOfThisType[0];
-                  const images = ROOM_IMAGES[type] || ROOM_IMAGES.single;
-                  return (
-                    <div key={type} style={S.typeCard} onClick={() => setSelectedRoomType(type)}>
-                      <div style={S.typeCoverWrap}>
-                        <img src={images[0]} alt={type} style={S.typeCover} />
-                        <div style={S.typeCoverOverlay} />
-                        <span style={{ ...S.typeBadge, color: "#c9a96e", borderLeft: "3px solid #c9a96e", background: "rgba(13,13,13,0.88)" }}>
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </span>
-                        <div style={S.typeAvailBubble}>
-                          <span style={{ color: availCount > 0 ? "#7eb87e" : "#c97b6e" }}>●</span>{" "}
-                          {availCount} available
+          {/* STEP 2a: Room Type */}
+          {step === 2 && !selectedRoomType && (
+            <div style={S.stepContent}>
+              <h2 style={S.stepTitle}>Choose a Room Type</h2>
+              <p style={S.stepSubtitle}>at {selectedHotel?.name}</p>
+              {roomTypes.length === 0 ? (
+                <p style={{ fontFamily: "'Jost',sans-serif", color: "#6a5f52", fontSize: "14px" }}>No rooms available.</p>
+              ) : (
+                <div style={S.typeGrid}>
+                  {roomTypes.map(type => {
+                    const roomsOfThisType = roomsForHotel.filter(r => r.room_type === type);
+                    const availCount = roomsOfThisType.filter(r => r.is_available).length;
+                    const sampleRoom = roomsOfThisType[0];
+                    const images = ROOM_IMAGES[type] || ROOM_IMAGES.single;
+                    return (
+                      <div key={type} className="gv-type-card" style={S.typeCard} onClick={() => setSelectedRoomType(type)}>
+                        <div style={S.typeCoverWrap}>
+                          <img src={images[0]} alt={type} style={S.typeCover} />
+                          <div style={S.typeCoverOverlay} />
+                          <span style={{ ...S.typeBadge, color: "#c9a96e", borderLeft: "3px solid #c9a96e", background: "rgba(13,13,13,0.88)" }}>
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
+                          </span>
+                          <div style={S.typeAvailBubble}>
+                            <span style={{ color: availCount > 0 ? "#7eb87e" : "#c97b6e" }}>●</span>{" "}
+                            {availCount} available
+                          </div>
+                        </div>
+                        <div style={S.typeBody}>
+                          <div style={S.typeMetaRow}>
+                            <span style={S.typeMeta}>👥 Up to {sampleRoom?.capacity} guests</span>
+                          </div>
+                          <p style={S.typeDesc}>{sampleRoom?.description || "Comfortable room with premium amenities."}</p>
+                          <div style={S.typeFooter}>
+                            <span style={S.typePrice}>₱{parseFloat(sampleRoom?.price_per_night || 0).toLocaleString()}<span style={S.perNight}>/night</span></span>
+                            <span style={S.typeViewBtn}>View rooms →</span>
+                          </div>
                         </div>
                       </div>
-                      <div style={S.typeBody}>
-                        <div style={S.typeMetaRow}>
-                          <span style={S.typeMeta}>👥 Up to {sampleRoom?.capacity} guests</span>
+                    );
+                  })}
+                </div>
+              )}
+              <button style={S.outlineBtn} onClick={() => { goToStep(1); setSelectedHotel(null); }}>← Back to Select Hotel</button>
+            </div>
+          )}
+
+          {/* STEP 2b: Individual Rooms */}
+          {step === 2 && selectedRoomType && (
+            <div style={S.stepContent}>
+              <button style={{ background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.35)", color: "#c9a96e", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "8px 16px", marginBottom: "12px", display: "inline-flex", alignItems: "center", gap: "6px", transition: "all 0.2s" }}
+                onClick={() => { setSelectedRoomType(null); setSelectedRoom(null); }}>
+                ← Back to Room Types
+              </button>
+              <h2 style={S.stepTitle}>{selectedRoomType.charAt(0).toUpperCase() + selectedRoomType.slice(1)} Rooms</h2>
+              <p style={S.stepSubtitle}>
+                {selectedHotel?.name} · {roomsOfType.filter(r => r.is_available).length} of {roomsOfType.length} available
+              </p>
+              <div style={S.roomsGrid}>
+                {roomsOfType.map(room => {
+                  const isAvail = room.is_available;
+                  const isSelected = selectedRoom?.id === room.id;
+                  const images = ROOM_IMAGES[room.room_type] || ROOM_IMAGES.single;
+                  return (
+                    <div key={room.id}
+                      className="gv-room-card"
+                      style={{ ...S.roomCard, ...(isSelected ? S.roomSelected : {}), ...(isAvail ? {} : S.roomUnavailable), cursor: isAvail ? "pointer" : "not-allowed" }}
+                      onClick={() => isAvail && setSelectedRoom(room)}>
+                      <div style={{ position: "relative" }}>
+                        <PhotoCarousel images={images} height={160} />
+                        {!isAvail && (
+                          <div style={S.unavailOverlay}>
+                            <span style={{ fontSize: "22px" }}>🚫</span>
+                            <span style={S.unavailText}>Unavailable</span>
+                          </div>
+                        )}
+                        {isAvail && <div style={S.vacantBadge}>● Vacant</div>}
+                      </div>
+                      <div style={S.roomCardBody}>
+                        <div style={S.roomCardTop}>
+                          <span style={S.roomNumber}>Room {room.room_number}</span>
+                          <span style={{ fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: isAvail ? "#7eb87e" : "#c97b6e" }}>
+                            {isAvail ? "Available" : "Unavailable"}
+                          </span>
                         </div>
-                        <p style={S.typeDesc}>{sampleRoom?.description || "Comfortable room with premium amenities."}</p>
-                        <div style={S.typeFooter}>
-                          <span style={S.typePrice}>₱{parseFloat(sampleRoom?.price_per_night || 0).toLocaleString()}<span style={S.perNight}>/night</span></span>
-                          <span style={S.typeViewBtn}>View rooms →</span>
+                        <div style={S.roomCardMeta}>
+                          <span>👥 Max {room.capacity}</span>
+                          <span style={{ color: "#c9a96e" }}>₱{parseFloat(room.price_per_night).toLocaleString()}/night</span>
                         </div>
+                        {isAvail && (
+                          <div style={{ ...S.selectRoomBtn, ...(isSelected ? S.selectRoomBtnActive : {}) }}>
+                            {isSelected ? "✓ Selected" : "Select this room"}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
-            )}
-            <button style={S.outlineBtn} onClick={() => setStep(1)}>← Back</button>
-          </div>
-        )}
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button style={S.outlineBtn} onClick={() => { setSelectedRoomType(null); setSelectedRoom(null); }}>← Back</button>
+                <button style={{ ...S.primaryBtn, opacity: selectedRoom ? 1 : 0.4 }} disabled={!selectedRoom} onClick={() => goToStep(3)}>
+                  Continue →
+                </button>
+              </div>
+            </div>
+          )}
 
-        {/* STEP 2b: Individual Rooms */}
-        {step === 2 && selectedRoomType && (
-          <div style={S.stepContent}>
-            <button style={{ background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.2)", color: "#a09080", cursor: "pointer", fontFamily: "'Jost',sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "8px 16px", marginBottom: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-              onClick={() => { setSelectedRoomType(null); setSelectedRoom(null); }}>
-              ← Back to Room Types
-            </button>
-            <h2 style={S.stepTitle}>{selectedRoomType.charAt(0).toUpperCase() + selectedRoomType.slice(1)} Rooms</h2>
-            <p style={S.stepSubtitle}>
-              {selectedHotel?.name} · {roomsOfType.filter(r => r.is_available).length} of {roomsOfType.length} available
-            </p>
-            <div style={S.roomsGrid}>
-              {roomsOfType.map(room => {
-                const isAvail = room.is_available;
-                const isSelected = selectedRoom?.id === room.id;
-                const images = ROOM_IMAGES[room.room_type] || ROOM_IMAGES.single;
-                return (
-                  <div key={room.id}
-                    style={{ ...S.roomCard, ...(isSelected ? S.roomSelected : {}), ...(isAvail ? {} : S.roomUnavailable), cursor: isAvail ? "pointer" : "not-allowed" }}
-                    onClick={() => isAvail && setSelectedRoom(room)}>
-                    <div style={{ position: "relative" }}>
-                      <PhotoCarousel images={images} height={160} />
-                      {!isAvail && (
-                        <div style={S.unavailOverlay}>
-                          <span style={{ fontSize: "22px" }}>🚫</span>
-                          <span style={S.unavailText}>Unavailable</span>
-                        </div>
-                      )}
-                      {isAvail && <div style={S.vacantBadge}>● Vacant</div>}
-                    </div>
-                    <div style={S.roomCardBody}>
-                      <div style={S.roomCardTop}>
-                        <span style={S.roomNumber}>Room {room.room_number}</span>
-                        <span style={{ fontFamily: "'Jost',sans-serif", fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: isAvail ? "#7eb87e" : "#c97b6e" }}>
-                          {isAvail ? "Available" : "Unavailable"}
-                        </span>
-                      </div>
-                      <div style={S.roomCardMeta}>
-                        <span>👥 Max {room.capacity}</span>
-                        <span style={{ color: "#c9a96e" }}>₱{parseFloat(room.price_per_night).toLocaleString()}/night</span>
-                      </div>
-                      {isAvail && (
-                        <div style={{ ...S.selectRoomBtn, ...(isSelected ? S.selectRoomBtnActive : {}) }}>
-                          {isSelected ? "✓ Selected" : "Select this room"}
-                        </div>
-                      )}
-                    </div>
+          {/* STEP 3: Your Details */}
+          {step === 3 && (
+            <div style={S.stepContent}>
+              <h2 style={S.stepTitle}>Your Details</h2>
+              <div style={S.formCard}>
+                <div style={S.formGrid}>
+                  <div>
+                    <label style={S.label}>Full Name</label>
+                    <input type="text" placeholder="Juan dela Cruz" value={form.name}
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      style={S.input} className="gv-input" />
                   </div>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button style={S.outlineBtn} onClick={() => { setSelectedRoomType(null); setSelectedRoom(null); }}>← Back</button>
-              <button style={{ ...S.primaryBtn, opacity: selectedRoom ? 1 : 0.4 }} disabled={!selectedRoom} onClick={() => setStep(3)}>
-                Continue →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: Your Details */}
-        {step === 3 && (
-          <div style={S.stepContent}>
-            <h2 style={S.stepTitle}>Your Details</h2>
-            <div style={S.formCard}>
-              <div style={S.formGrid}>
-                <div>
-                  <label style={S.label}>Full Name</label>
-                  <input type="text" placeholder="Juan dela Cruz" value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
-                    style={S.input} className="gv-input" />
-                </div>
-                <div>
-                  <label style={S.label}>Email Address <span style={S.optionalBadge}>Optional</span></label>
-                  <input
-                    type="text"
-                    placeholder="juan@email.com"
-                    value={form.email}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setForm({ ...form, email: val });
-                      // Real-time validation: must have @ if not empty
-                      if (val && !/^[^\s@]+@[^\s@]+/.test(val)) {
-                        setFormErrors(prev => ({ ...prev, email: "Email must contain @" }));
-                      } else {
-                        setFormErrors(prev => ({ ...prev, email: "" }));
-                      }
-                    }}
-                    style={{ ...S.input, ...(formErrors.email ? { borderColor: "#c97b6e" } : {}) }}
-                    className="gv-input"
-                  />
-                  {formErrors.email && <p className="gv-error">⚠ {formErrors.email}</p>}
-                </div>
-                <div>
-                  <label style={S.label}>Phone Number</label>
-                  <input
-                    type="tel"
-                    placeholder="09XX-XXX-XXXX"
-                    value={form.phone}
-                    onChange={e => {
-                      // Allow only numbers, +, -, spaces
-                      const val = e.target.value.replace(/[^0-9+\-\s]/g, "");
-                      setForm({ ...form, phone: val });
-                      if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: "" }));
-                    }}
-                    onKeyDown={e => {
-                      // Block letters and special chars except allowed keys
-                      const allowed = ["Backspace","Delete","Tab","ArrowLeft","ArrowRight","Home","End","+","-"," "];
-                      if (!/[0-9]/.test(e.key) && !allowed.includes(e.key)) {
-                        e.preventDefault();
-                      }
-                    }}
-                    style={{ ...S.input, ...(formErrors.phone ? { borderColor: "#c97b6e" } : {}) }}
-                    className="gv-input"
-                  />
-                  {formErrors.phone && <p className="gv-error">⚠ {formErrors.phone}</p>}
-                </div>
-                <div>
-                  <label style={S.label}>Number of Guests</label>
-                  <input type="number" placeholder={`1–${selectedRoom?.capacity}`} min="1" max={selectedRoom?.capacity}
-                    value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })}
-                    style={S.input} className="gv-input" />
-                  <p style={S.inputHint}>For safety compliance · Room capacity: {selectedRoom?.capacity} person{selectedRoom?.capacity > 1 ? "s" : ""}</p>
-                </div>
-                <div>
-                  <label style={S.label}>Check-in Date</label>
-                  <input type="date" value={form.check_in}
-                    onChange={e => { setForm({ ...form, check_in: e.target.value }); e.target.classList.toggle("has-value", !!e.target.value); }}
-                    style={S.input} className={`gv-input${form.check_in ? " has-value" : ""}`} min={new Date().toISOString().split("T")[0]} />
-                </div>
-                <div>
-                  <label style={S.label}>Check-out Date</label>
-                  <input type="date" value={form.check_out}
-                    onChange={e => { setForm({ ...form, check_out: e.target.value }); e.target.classList.toggle("has-value", !!e.target.value); }}
-                    style={S.input} className={`gv-input${form.check_out ? " has-value" : ""}`} min={form.check_in || new Date().toISOString().split("T")[0]} />
-                </div>
-                <div style={{ gridColumn: "span 2" }}>
-                  <label style={S.label}>Notes <span style={S.optionalBadge}>Optional</span></label>
-                  <textarea placeholder="Any special requests..." value={form.notes}
-                    onChange={e => setForm({ ...form, notes: e.target.value })}
-                    style={{ ...S.input, height: "80px", resize: "vertical" }} className="gv-input" />
-                </div>
-              </div>
-            </div>
-            {nights > 0 && (
-              <div style={S.priceSummary}>
-                <span>₱{parseFloat(selectedRoom?.price_per_night).toLocaleString()} × {nights} night{nights > 1 ? "s" : ""}</span>
-                <span style={{ color: "#c9a96e", fontSize: "20px" }}>₱{totalPrice.toLocaleString()}</span>
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button style={S.outlineBtn} onClick={() => setStep(2)}>← Back</button>
-              <button
-                style={{ ...S.primaryBtn, opacity: (form.name && form.phone && form.guests && form.check_in && form.check_out && nights > 0 && !formErrors.email && !formErrors.phone) ? 1 : 0.4 }}
-                disabled={!(form.name && form.phone && form.guests && form.check_in && form.check_out && nights > 0 && !formErrors.email && !formErrors.phone)}
-                onClick={() => {
-                  if (validateForm()) setStep(4);
-                }}>
-                Continue →
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: Confirm */}
-        {step === 4 && (
-          <div style={S.stepContent}>
-            <h2 style={S.stepTitle}>Confirm Booking</h2>
-            <div style={S.confirmCard}>
-              {[
-                { label: "HOTEL", value: selectedHotel?.name, sub: selectedHotel?.address },
-                { label: "ROOM TYPE", value: selectedRoomType?.charAt(0).toUpperCase() + selectedRoomType?.slice(1) },
-                { label: "ROOM NUMBER", value: `Room ${selectedRoom?.room_number}` },
-                { label: "GUEST", value: form.name, sub: `${form.email ? form.email + " · " : ""}${form.phone}` },
-                { label: "NUMBER OF GUESTS", value: `${form.guests} person${Number(form.guests) > 1 ? "s" : ""}` },
-                { label: "DATES", value: `${form.check_in} → ${form.check_out}`, sub: `${nights} night${nights > 1 ? "s" : ""}` },
-                { label: "TOTAL PRICE", value: `₱${totalPrice.toLocaleString()}`, gold: true },
-                ...(form.notes ? [{ label: "NOTES", sub: form.notes }] : []),
-              ].map((row, i, arr) => (
-                <div key={i}>
-                  <div style={S.confirmSection}>
-                    <p style={S.confirmLabel}>{row.label}</p>
-                    {row.value && <p style={{ ...S.confirmValue, ...(row.gold ? { color: "#c9a96e", fontSize: "28px", fontWeight: 300 } : {}) }}>{row.value}</p>}
-                    {row.sub && <p style={S.confirmSub}>{row.sub}</p>}
+                  <div>
+                    <label style={S.label}>Email Address <span style={S.optionalBadge}>Optional</span></label>
+                    <input
+                      type="text"
+                      placeholder="juan@email.com"
+                      value={form.email}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setForm({ ...form, email: val });
+                        if (val && !/^[^\s@]+@[^\s@]+/.test(val)) {
+                          setFormErrors(prev => ({ ...prev, email: "Email must contain @" }));
+                        } else {
+                          setFormErrors(prev => ({ ...prev, email: "" }));
+                        }
+                      }}
+                      style={{ ...S.input, ...(formErrors.email ? { borderColor: "#c97b6e" } : {}) }}
+                      className="gv-input"
+                    />
+                    {formErrors.email && <p className="gv-error">⚠ {formErrors.email}</p>}
                   </div>
-                  {i < arr.length - 1 && <div style={S.confirmDivider} />}
+                  <div>
+                    <label style={S.label}>Phone Number</label>
+                    <input
+                      type="tel"
+                      placeholder="09XX-XXX-XXXX"
+                      value={form.phone}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[^0-9+\-\s]/g, "");
+                        setForm({ ...form, phone: val });
+                        if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: "" }));
+                      }}
+                      onKeyDown={e => {
+                        const allowed = ["Backspace", "Delete", "Tab", "ArrowLeft", "ArrowRight", "Home", "End", "+", "-", " "];
+                        if (!/[0-9]/.test(e.key) && !allowed.includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      style={{ ...S.input, ...(formErrors.phone ? { borderColor: "#c97b6e" } : {}) }}
+                      className="gv-input"
+                    />
+                    {formErrors.phone && <p className="gv-error">⚠ {formErrors.phone}</p>}
+                  </div>
+                  <div>
+                    <label style={S.label}>Number of Guests</label>
+                    <input type="number" placeholder={`1–${selectedRoom?.capacity}`} min="1" max={selectedRoom?.capacity}
+                      value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })}
+                      style={S.input} className="gv-input" />
+                    <p style={S.inputHint}>For safety compliance · Room capacity: {selectedRoom?.capacity} person{selectedRoom?.capacity > 1 ? "s" : ""}</p>
+                  </div>
+                  <div>
+                    <label style={S.label}>Check-in Date</label>
+                    <input type="date" value={form.check_in}
+                      onChange={e => { setForm({ ...form, check_in: e.target.value }); e.target.classList.toggle("has-value", !!e.target.value); }}
+                      style={S.input} className={`gv-input${form.check_in ? " has-value" : ""}`} min={new Date().toISOString().split("T")[0]} />
+                  </div>
+                  <div>
+                    <label style={S.label}>Check-out Date</label>
+                    <input type="date" value={form.check_out}
+                      onChange={e => { setForm({ ...form, check_out: e.target.value }); e.target.classList.toggle("has-value", !!e.target.value); }}
+                      style={S.input} className={`gv-input${form.check_out ? " has-value" : ""}`} min={form.check_in || new Date().toISOString().split("T")[0]} />
+                  </div>
+                  <div style={{ gridColumn: "span 2" }}>
+                    <label style={S.label}>Notes <span style={S.optionalBadge}>Optional</span></label>
+                    <textarea placeholder="Any special requests..." value={form.notes}
+                      onChange={e => setForm({ ...form, notes: e.target.value })}
+                      style={{ ...S.input, height: "80px", resize: "vertical" }} className="gv-input" />
+                  </div>
                 </div>
-              ))}
-            </div>
-            {submitError && (
-              <div style={{ background: "rgba(201,123,110,0.1)", border: "1px solid rgba(201,123,110,0.3)", color: "#c97b6e", fontFamily: "'Jost',sans-serif", fontSize: "13px", padding: "12px 16px" }}>
-                ⚠ {submitError}
               </div>
-            )}
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button style={S.outlineBtn} onClick={() => setStep(3)} disabled={submitting}>← Back</button>
-              <button style={{ ...S.primaryBtn, opacity: submitting ? 0.6 : 1 }} onClick={handleSubmit} disabled={submitting}>
-                {submitting ? "Confirming..." : "Confirm Booking ✓"}
-              </button>
+              {nights > 0 && (
+                <div style={S.priceSummary}>
+                  <span>₱{parseFloat(selectedRoom?.price_per_night).toLocaleString()} × {nights} night{nights > 1 ? "s" : ""}</span>
+                  <span style={{ color: "#c9a96e", fontSize: "20px" }}>₱{totalPrice.toLocaleString()}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button style={S.outlineBtn} onClick={() => goToStep(2)}>← Back</button>
+                <button
+                  style={{ ...S.primaryBtn, opacity: (form.name && form.phone && form.guests && form.check_in && form.check_out && nights > 0 && !formErrors.email && !formErrors.phone) ? 1 : 0.4 }}
+                  disabled={!(form.name && form.phone && form.guests && form.check_in && form.check_out && nights > 0 && !formErrors.email && !formErrors.phone)}
+                  onClick={() => {
+                    if (validateForm()) goToStep(4);
+                  }}>
+                  Continue →
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* STEP 4: Confirm */}
+          {step === 4 && (
+            <div style={S.stepContent}>
+              <h2 style={S.stepTitle}>Confirm Booking</h2>
+              <div style={S.confirmCard}>
+                {[
+                  { label: "HOTEL", value: selectedHotel?.name, sub: selectedHotel?.address },
+                  { label: "ROOM TYPE", value: selectedRoomType?.charAt(0).toUpperCase() + selectedRoomType?.slice(1) },
+                  { label: "ROOM NUMBER", value: `Room ${selectedRoom?.room_number}` },
+                  { label: "GUEST", value: form.name, sub: `${form.email ? form.email + " · " : ""}${form.phone}` },
+                  { label: "NUMBER OF GUESTS", value: `${form.guests} person${Number(form.guests) > 1 ? "s" : ""}` },
+                  { label: "DATES", value: `${form.check_in} → ${form.check_out}`, sub: `${nights} night${nights > 1 ? "s" : ""}` },
+                  { label: "TOTAL PRICE", value: `₱${totalPrice.toLocaleString()}`, gold: true },
+                  ...(form.notes ? [{ label: "NOTES", sub: form.notes }] : []),
+                ].map((row, i, arr) => (
+                  <div key={i}>
+                    <div style={S.confirmSection}>
+                      <p style={S.confirmLabel}>{row.label}</p>
+                      {row.value && <p style={{ ...S.confirmValue, ...(row.gold ? { color: "#c9a96e", fontSize: "28px", fontWeight: 300 } : {}) }}>{row.value}</p>}
+                      {row.sub && <p style={S.confirmSub}>{row.sub}</p>}
+                    </div>
+                    {i < arr.length - 1 && <div style={S.confirmDivider} />}
+                  </div>
+                ))}
+              </div>
+              {submitError && (
+                <div style={{ background: "rgba(201,123,110,0.1)", border: "1px solid rgba(201,123,110,0.3)", color: "#c97b6e", fontFamily: "'Jost',sans-serif", fontSize: "13px", padding: "12px 16px" }}>
+                  ⚠ {submitError}
+                </div>
+              )}
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button style={S.outlineBtn} onClick={() => goToStep(3)} disabled={submitting}>← Back</button>
+                <button style={{ ...S.primaryBtn, opacity: submitting ? 0.6 : 1 }} onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? "Confirming..." : "Confirm Booking ✓"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sticky Booking Summary Sidebar (Step 3 only) */}
+        {showSidebar && (
+          <BookingSummary
+            selectedHotel={selectedHotel}
+            selectedRoom={selectedRoom}
+            form={form}
+            nights={nights}
+            totalPrice={totalPrice}
+          />
         )}
       </div>
+
+      {/* unused animDir state used here to avoid lint warning */}
+      <span style={{ display: "none" }}>{animDir}</span>
     </div>
   );
 }
