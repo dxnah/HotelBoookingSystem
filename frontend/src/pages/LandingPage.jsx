@@ -85,7 +85,7 @@ function ParticleCanvas() {
   );
 }
 
-export default function LandingPage({ navigate, onAdminClick, scrollToFeatures }) {
+export default function LandingPage({ navigate, onAdminClick, scrollToFeatures, isUserAuthenticated }) {
 
   useEffect(() => {
     if (scrollToFeatures) {
@@ -111,6 +111,11 @@ export default function LandingPage({ navigate, onAdminClick, scrollToFeatures }
           <button style={styles.navLink} onClick={() => navigate("about")}>About Us</button>
           <button style={styles.navLink} onClick={() => navigate("floormap")}>Floor Map</button>
           <button style={styles.navLink} onClick={() => navigate("bookings")}>My Bookings</button>
+          {isUserAuthenticated ? (
+            <button style={styles.navBtn} onClick={() => navigate("userprofile")}>👤 My Account</button>
+          ) : (
+            <button style={styles.navLink} onClick={() => navigate("userlogin")}>Sign In</button>
+          )}
           <button style={styles.navBtn} onClick={onAdminClick || (() => navigate("admin"))}>Admin</button>
         </div>
       </nav>
