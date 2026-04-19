@@ -1,8 +1,14 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Hotel, Room, Client, Booking
-from .serializers import HotelSerializer, RoomSerializer, ClientSerializer, BookingSerializer
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.models import Token
+from django.contrib.auth import authenticate
+from .models import Hotel, Room, Client, Booking, User
+from .serializers import (
+    HotelSerializer, RoomSerializer, ClientSerializer, BookingSerializer,
+    UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer
+)
 
 
 # --- Hotel ---
@@ -96,3 +102,55 @@ class RescheduleBooking(APIView):
                 {'error': 'Booking not found.'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+# --- User Registration ---
+class UserRegisterView(APIView):
+    def post(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key,
+                'user': UserProfileSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# --- User Login ---
+class UserLoginView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        password = request.data.get('password')
+        user = authenticate(request, username=email, password=password)
+        if user:
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key,
+                'user': UserProfileSerializer(user).data
+            }, status=status.HTTP_200_OK)
+        return Response(
+            {'error': 'Invalid email or password.'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+
+# --- User Profile ---
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
+
+    def put(self, request):
+        serializer = UserProfileSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

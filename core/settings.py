@@ -43,7 +43,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    'djoser',
     'appointments',
 ]
 
@@ -146,3 +145,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",   
     "http://localhost:3000",   
 ]
+
+
+
+
+AUTH_USER_MODEL = 'appointments.User'

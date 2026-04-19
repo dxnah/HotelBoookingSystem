@@ -21,4 +21,9 @@ urlpatterns = [
     # Special Actions
     path('bookings/<int:pk>/cancel/', views.CancelBooking.as_view()),
     path('bookings/<int:pk>/reschedule/', views.RescheduleBooking.as_view()),
+
+    # User Auth
+    path('user/register/', views.UserRegisterView.as_view()),
+    path('user/login/', views.UserLoginView.as_view()),
+    path('user/profile/', views.UserProfileView.as_view()),
 ]
