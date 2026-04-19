@@ -1,11 +1,5 @@
 import { useState } from "react";
 
-// ─── TOP-DOWN 2D FLOOR PLAN ──────────────────────────────────────────────────
-// Realistic hotel layout: central corridor, rooms on both sides,
-// amenities clustered logically, exits at ends, lift/stairs at corridor ends.
-// Uses SVG with clipPath photo textures on room fills.
-// ─────────────────────────────────────────────────────────────────────────────
-
 const PHOTOS = {
   lobby:   "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=70",
   recept:  "https://images.unsplash.com/photo-1600880292089-90a7e086ee0c?w=400&q=70",
@@ -533,7 +527,7 @@ export default function FloorMapPage({ navigate }) {
   return (
     <div style={S.page}>
       <nav style={S.nav}>
-        <button style={S.backBtn} onClick={() => navigate("landing")}>← Back</button>
+        <button style={S.backBtn} onClick={() => navigate("landing")}>← Back to Home</button>
         <div style={S.logo}>GRAND<span style={S.accent}>VELOUR</span></div>
         <button style={S.bookBtn} onClick={() => navigate("book")}>Reserve a Room</button>
       </nav>

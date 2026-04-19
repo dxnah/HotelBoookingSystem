@@ -13,8 +13,77 @@ const backLabel = (prev) => {
   if (!prev || prev === "landing") return "← Back to Home";
   if (prev === "book") return "← Back to Booking";
   if (prev === "rooms") return "← Back to Accommodations";
-  return "← Back to Previous";
+  return "← Back";
 };
+
+function Toast({ toast }) {
+  if (!toast) return null;
+  return (
+    <div style={{
+      position: "fixed", top: "24px", right: "24px", zIndex: 9999,
+      padding: "12px 20px", fontFamily: "'Jost', sans-serif", fontSize: "13px",
+      animation: "toastIn 0.3s ease forwards", backdropFilter: "blur(10px)",
+      background: toast.type === "success" ? "rgba(126,184,126,0.15)" : "rgba(201,123,110,0.15)",
+      border: `1px solid ${toast.type === "success" ? "rgba(126,184,126,0.4)" : "rgba(201,123,110,0.4)"}`,
+      color: toast.type === "success" ? "#7eb87e" : "#c97b6e",
+      display: "flex", alignItems: "center", gap: "8px",
+    }}>
+      {toast.type === "success" ? "✓" : "⚠"} {toast.message}
+    </div>
+  );
+}
+
+function EmptyState({ hasSearch, navigate }) {
+  if (hasSearch) {
+    return (
+      <tr>
+        <td colSpan={9} style={{ padding: "80px 40px", textAlign: "center" }}>
+          <div style={{ fontSize: "32px", marginBottom: "16px" }}>🔍</div>
+          <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", color: "#e8dcc8", margin: "0 0 8px", fontWeight: 300 }}>
+            No matching bookings
+          </p>
+          <p style={{ fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#4a3f32", margin: 0 }}>
+            Try a different name, hotel, or room number.
+          </p>
+        </td>
+      </tr>
+    );
+  }
+  return (
+    <tr>
+      <td colSpan={9} style={{ padding: "80px 40px", textAlign: "center" }}>
+        <div style={{ fontSize: "48px", marginBottom: "20px" }}>🏨</div>
+        <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "32px", color: "#e8dcc8", margin: "0 0 8px", fontWeight: 300 }}>
+          No reservations found
+        </p>
+        <p style={{ fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#4a3f32", margin: "0 0 32px", lineHeight: 1.7 }}>
+          No bookings have been made yet.<br />
+          Book a room or look up a booking by reference number.
+        </p>
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+          <button
+            style={{ background: "#c9a96e", border: "none", color: "#0d0d0d", padding: "13px 28px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer", fontWeight: 500 }}
+            onClick={() => navigate("book")}
+          >
+            Reserve a Room →
+          </button>
+          <button
+            style={{ background: "none", border: "1px solid #2a2520", color: "#6a5f52", padding: "13px 28px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
+            onClick={() => navigate("lookup")}
+          >
+            Look Up a Booking
+          </button>
+          <button
+            style={{ background: "none", border: "none", color: "#4a3f32", padding: "13px 16px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
+            onClick={() => navigate("userlogin")}
+          >
+            Sign In
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 export default function ViewBookings({ navigate, goBack, previousPage }) {
   const [bookings, setBookings] = useState([]);
@@ -24,9 +93,13 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selected, setSelected] = useState(null);
   const [activeAction, setActiveAction] = useState(null);
-
-  // Edit form state — pre-filled from selected booking
+  const [toast, setToast] = useState(null);
   const [editForm, setEditForm] = useState({ name: "", email: "", phone: "", notes: "" });
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -37,7 +110,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setBookings(Array.isArray(data) ? data : []);
-      } catch (err) {
+      } catch {
         setError("Could not load bookings. Is the Django server running?");
       } finally {
         setLoading(false);
@@ -64,14 +137,12 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
   const openModal = async (b) => {
     setSelected(b);
     setActiveAction(null);
-    // Pre-fill edit form with existing data
     setEditForm({
       name: b.client_name || "",
       email: "",
       phone: "",
       notes: b.notes || "",
     });
-    // Fetch full client details to get email & phone
     if (b.client) {
       try {
         const res = await fetch(`${API_BASE}/clients/${b.client}/`);
@@ -84,7 +155,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
             notes: b.notes || "",
           });
         }
-      } catch (err) {
+      } catch {
         // fallback to booking data
       }
     }
@@ -97,8 +168,17 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
   };
 
   if (loading) return (
-    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#c9a96e", fontFamily: "'Jost', sans-serif", fontSize: "14px", letterSpacing: "3px" }}>
-      LOADING...
+    <div style={{ background: "#0d0d0d", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <style>{`@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }`}</style>
+      <div style={{ width: "100%", maxWidth: "900px", padding: "60px" }}>
+        {[1, 2, 3, 4, 5].map(i => (
+          <div key={i} style={{
+            height: "52px", marginBottom: "2px", borderRadius: "2px",
+            background: "linear-gradient(90deg, #111 25%, #181816 50%, #111 75%)",
+            backgroundSize: "200% 100%", animation: "shimmer 1.4s infinite",
+          }} />
+        ))}
+      </div>
     </div>
   );
 
@@ -110,7 +190,14 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
 
   return (
     <div style={styles.page}>
+      <style>{`
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+        .vb-row:hover { background: rgba(201,169,110,0.04) !important; }
+        .filter-btn:hover { border-color: #c9a96e !important; color: #c9a96e !important; }
+      `}</style>
       <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+
+      <Toast toast={toast} />
 
       <nav style={styles.nav}>
         <button style={styles.backBtn} onClick={goBack ? goBack : () => navigate("landing")}>
@@ -138,7 +225,6 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
           </div>
         </div>
 
-        {/* Filters */}
         <div style={styles.filters}>
           <input
             type="text"
@@ -151,6 +237,7 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
             {["all", "confirmed", "rescheduled", "cancelled"].map(s => (
               <button
                 key={s}
+                className="filter-btn"
                 style={{ ...styles.filterBtn, ...(filterStatus === s ? styles.filterActive : {}) }}
                 onClick={() => setFilterStatus(s)}
               >
@@ -160,7 +247,6 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
           </div>
         </div>
 
-        {/* Table */}
         <div style={styles.tableWrap}>
           <table style={styles.table}>
             <thead>
@@ -172,13 +258,9 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ ...styles.td, textAlign: "center", color: "#4a3f32", padding: "48px" }}>
-                    {bookings.length === 0 ? "No bookings yet." : "No bookings match your search."}
-                  </td>
-                </tr>
+                <EmptyState hasSearch={search.length > 0 || filterStatus !== "all"} navigate={navigate} />
               ) : filtered.map(b => (
-                <tr key={b.id} style={styles.tr} onClick={() => openModal(b)}>
+                <tr key={b.id} className="vb-row" style={styles.tr} onClick={() => openModal(b)}>
                   <td style={styles.td}>#{b.id}</td>
                   <td style={styles.td}>
                     <div style={styles.guestName}>{b.client_name || "—"}</div>
@@ -228,7 +310,6 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
             </div>
             <div style={styles.modalBody}>
 
-              {/* Booking Details */}
               {!activeAction && (
                 <>
                   {[
@@ -243,14 +324,12 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                   ].map((row, i) => (
                     <div key={i} style={styles.modalRow}>
                       <span style={styles.modalLabel}>{row.label}</span>
-                      <div>
-                        <span style={{
-                          ...styles.modalValue,
-                          ...(row.highlight ? { color: "#c9a96e", fontSize: "22px" } : {})
-                        }}>
-                          {row.value}
-                        </span>
-                      </div>
+                      <span style={{
+                        ...styles.modalValue,
+                        ...(row.highlight ? { color: "#c9a96e", fontSize: "22px" } : {})
+                      }}>
+                        {row.value}
+                      </span>
                     </div>
                   ))}
                   <div style={styles.modalRow}>
@@ -267,35 +346,26 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                 </>
               )}
 
-              {/* Actions — only for confirmed bookings */}
               {selected.status === "confirmed" && (
                 <div style={{ borderTop: !activeAction ? "1px solid #1e1a16" : "none" }}>
 
-                  {/* Action Buttons */}
                   {!activeAction && (
                     <div style={{ padding: "20px 32px", display: "flex", gap: "12px" }}>
                       <button
                         style={{ flex: 1, background: "rgba(106,159,181,0.1)", border: "1px solid rgba(106,159,181,0.3)", color: "#6a9fb5", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
                         onClick={() => setActiveAction("edit")}
-                      >
-                        Edit Profile
-                      </button>
+                      >Edit Profile</button>
                       <button
                         style={{ flex: 1, background: "rgba(201,169,110,0.1)", border: "1px solid rgba(201,169,110,0.3)", color: "#c9a96e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
                         onClick={() => setActiveAction("reschedule")}
-                      >
-                        Reschedule
-                      </button>
+                      >Reschedule</button>
                       <button
                         style={{ flex: 1, background: "rgba(201,123,110,0.1)", border: "1px solid rgba(201,123,110,0.3)", color: "#c97b6e", padding: "12px", fontFamily: "'Jost',sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer" }}
                         onClick={() => setActiveAction("cancel")}
-                      >
-                        Cancel
-                      </button>
+                      >Cancel</button>
                     </div>
                   )}
 
-                  {/* Edit Profile Form — pre-filled */}
                   {activeAction === "edit" && (
                     <div style={{ padding: "28px 32px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -340,9 +410,9 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                               setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, client_name: updatedClient.name, notes: updatedBooking.notes } : b));
                               setSelected(prev => ({ ...prev, client_name: updatedClient.name, notes: updatedBooking.notes }));
                               setActiveAction(null);
-                              alert("Profile updated successfully!");
+                              showToast("Profile updated successfully!");
                             } else {
-                              alert("Could not update. Check your inputs.");
+                              showToast("Could not update. Check your inputs.", "error");
                             }
                           }}
                         >
@@ -352,7 +422,6 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                     </div>
                   )}
 
-                  {/* Reschedule Form */}
                   {activeAction === "reschedule" && (
                     <div style={{ padding: "28px 32px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -378,7 +447,10 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                         onClick={async () => {
                           const newCheckIn = document.getElementById("modal-checkin").value;
                           const newCheckOut = document.getElementById("modal-checkout").value;
-                          if (!newCheckIn || !newCheckOut) return alert("Please select both dates.");
+                          if (!newCheckIn || !newCheckOut) {
+                            showToast("Please select both dates.", "error");
+                            return;
+                          }
                           const res = await fetch(`${API_BASE}/bookings/${selected.id}/reschedule/`, {
                             method: "PATCH",
                             headers: { "Content-Type": "application/json" },
@@ -389,9 +461,9 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                             setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, ...updated } : b));
                             setSelected(prev => ({ ...prev, ...updated }));
                             setActiveAction(null);
+                            showToast("Booking rescheduled successfully!");
                           } else {
-                            const err = await res.json();
-                            alert("Error: " + JSON.stringify(err));
+                            showToast("Could not reschedule. Please try again.", "error");
                           }
                         }}
                       >
@@ -400,7 +472,6 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                     </div>
                   )}
 
-                  {/* Cancel Confirm */}
                   {activeAction === "cancel" && (
                     <div style={{ padding: "28px 32px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
@@ -416,8 +487,9 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
                             setBookings(prev => prev.map(b => b.id === selected.id ? { ...b, status: "cancelled" } : b));
                             setSelected(prev => ({ ...prev, status: "cancelled" }));
                             setActiveAction(null);
+                            showToast("Booking cancelled.");
                           } else {
-                            alert("Could not cancel booking.");
+                            showToast("Could not cancel booking.", "error");
                           }
                         }}
                       >
@@ -453,13 +525,13 @@ const styles = {
   filters: { display: "flex", gap: "16px", marginBottom: "32px", alignItems: "center" },
   searchInput: { flex: 1, background: "#111", border: "1px solid #2a2520", color: "#e8dcc8", padding: "12px 16px", fontFamily: "'Jost', sans-serif", fontSize: "13px", outline: "none" },
   filterBtns: { display: "flex", gap: "8px" },
-  filterBtn: { background: "none", border: "1px solid #1e1a16", color: "#4a3f32", padding: "10px 16px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "1px", textTransform: "uppercase", cursor: "pointer" },
+  filterBtn: { background: "none", border: "1px solid #1e1a16", color: "#4a3f32", padding: "10px 16px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "1px", textTransform: "uppercase", cursor: "pointer", transition: "all 0.2s" },
   filterActive: { border: "1px solid #c9a96e", color: "#c9a96e", background: "rgba(201,169,110,0.08)" },
   tableWrap: { border: "1px solid #1e1a16", overflow: "hidden" },
   table: { width: "100%", borderCollapse: "collapse" },
   thead: { background: "#111" },
   th: { fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#4a3f32", textTransform: "uppercase", padding: "16px 20px", textAlign: "left", borderBottom: "1px solid #1e1a16" },
-  tr: { borderBottom: "1px solid #1a1612", cursor: "pointer" },
+  tr: { borderBottom: "1px solid #1a1612", cursor: "pointer", transition: "background 0.15s" },
   td: { padding: "16px 20px", fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#8a7a68", verticalAlign: "middle" },
   guestName: { color: "#e8dcc8", fontFamily: "'Cormorant Garamond', serif", fontSize: "16px" },
   hotelName: { fontSize: "13px" },

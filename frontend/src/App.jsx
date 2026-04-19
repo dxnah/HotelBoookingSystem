@@ -8,6 +8,8 @@ import RoomsPage from "./pages/RoomsPage";
 import AboutPage from "./pages/AboutPage";
 import FeaturePage from "./pages/FeaturePage";
 import FloorMapPage from "./pages/FloorMapPage";
+import UserLogin from "./pages/UserLogin";
+import UserProfile from "./pages/UserProfile";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(
@@ -19,6 +21,9 @@ export default function App() {
   const [previousPage, setPreviousPage] = useState("landing");
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(
     () => sessionStorage.getItem("isAdminAuthenticated") === "true"
+  );
+  const [isUserAuthenticated, setIsUserAuthenticated] = useState(
+    () => !!sessionStorage.getItem("userToken")
   );
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [scrollToFeatures, setScrollToFeatures] = useState(false);
@@ -55,10 +60,25 @@ export default function App() {
     navigate("landing");
   };
 
+  const handleUserLogout = () => {
+    sessionStorage.removeItem("userToken");
+    sessionStorage.removeItem("userData");
+    sessionStorage.removeItem("userUsername");
+    setIsUserAuthenticated(false);
+    navigate("landing");
+  };
+
   return (
     <div style={{ fontFamily: "'Cormorant Garamond', serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
-      {currentPage === "landing" && <LandingPage navigate={navigate} onAdminClick={handleAdminNav} scrollToFeatures={scrollToFeatures} />}
+      {currentPage === "landing" && (
+        <LandingPage
+          navigate={navigate}
+          onAdminClick={handleAdminNav}
+          scrollToFeatures={scrollToFeatures}
+          isUserAuthenticated={isUserAuthenticated}
+        />
+      )}
       {currentPage === "book" && <BookAppointment navigate={navigate} goBack={goBack} previousPage={previousPage} />}
       {currentPage === "bookings" && <ViewBookings navigate={navigate} goBack={goBack} previousPage={previousPage} />}
       {currentPage === "admin" && !isAdminAuthenticated && <AdminLogin navigate={navigate} onLoginSuccess={() => {
@@ -70,6 +90,18 @@ export default function App() {
       {currentPage === "about" && <AboutPage navigate={navigate} />}
       {currentPage === "feature" && <FeaturePage navigate={navigate} feature={selectedFeature} onBack={navigateToFeatures} />}
       {currentPage === "floormap" && <FloorMapPage navigate={navigate} />}
+      {currentPage === "userlogin" && (
+        <UserLogin
+          navigate={navigate}
+          onLoginSuccess={() => setIsUserAuthenticated(true)}
+        />
+      )}
+      {currentPage === "userprofile" && (
+        <UserProfile
+          navigate={navigate}
+          onLogout={handleUserLogout}
+        />
+      )}
     </div>
   );
 }
