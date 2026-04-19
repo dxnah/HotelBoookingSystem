@@ -61,8 +61,8 @@ export default function UserProfile({ navigate, onLogout }) {
             email: parsed.email || "",
           });
         }
-        const res = await fetch("http://127.0.0.1:8000/api/v1/auth/users/me/", {
-          headers: { "Authorization": `Token ${token}` },
+        const res = await fetch("http://127.0.0.1:8000/api/v1/user/profile/", {
+          headers: { "Authorization": `Bearer ${token}` },
         });
         if (res.ok) {
           const me = await res.json();
@@ -70,12 +70,22 @@ export default function UserProfile({ navigate, onLogout }) {
           setUser(me);
           setEditForm({ first_name: me.first_name || "", last_name: me.last_name || "", email: me.email || "" });
         }
-        const bRes = await fetch(`${API_BASE}/bookings/`, {
-          headers: { "Authorization": `Token ${token}` },
-        });
+        const bRes = await fetch(`${API_BASE}/bookings/`);
         if (bRes.ok) {
-          const bData = await bRes.json();
-          setBookings(Array.isArray(bData) ? bData : []);
+          const allBookings = await bRes.json();
+          const cached = sessionStorage.getItem("userData");
+          if (cached) {
+            const u = JSON.parse(cached);
+            const userEmail = (u.email || "").toLowerCase();
+            const userName = `${u.first_name || ""} ${u.last_name || ""}`.trim().toLowerCase();
+            const myBookings = allBookings.filter(b =>
+              (b.client_name || "").toLowerCase() === userName ||
+              (b.client_email || "").toLowerCase() === userEmail
+            );
+            setBookings(myBookings);
+          } else {
+            setBookings(Array.isArray(allBookings) ? allBookings : []);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -90,11 +100,14 @@ export default function UserProfile({ navigate, onLogout }) {
     const token = sessionStorage.getItem("userToken");
     setSaving(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/v1/auth/users/me/", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "Authorization": `Token ${token}` },
-        body: JSON.stringify(editForm),
-      });
+        const res = await fetch("http://127.0.0.1:8000/api/v1/user/profile/", {
+          method: "PATCH",
+          headers: { 
+            "Content-Type": "application/json", 
+            "Authorization": `Bearer ${token}` 
+          },
+          body: JSON.stringify(editForm),
+        });
       if (res.ok) {
         const updated = await res.json();
         setUser(updated);
@@ -185,7 +198,7 @@ export default function UserProfile({ navigate, onLogout }) {
             <div style={S.avatarRing} />
           </div>
           <h2 style={S.sidebarName}>{fullName}</h2>
-          <p style={S.sidebarUsername}>@{user?.username}</p>
+          <p style={S.sidebarUsername}>{user?.email}</p>
           <div style={S.sidebarDivider} />
           <p style={S.memberSince}>
             MEMBER SINCE<br />
@@ -230,10 +243,6 @@ export default function UserProfile({ navigate, onLogout }) {
               </div>
 
               <div style={S.profileGrid}>
-                <div style={S.infoBlock}>
-                  <span style={S.infoLabel}>USERNAME</span>
-                  <span style={S.infoValue}>{user?.username}</span>
-                </div>
                 <div style={S.infoBlock}>
                   <span style={S.infoLabel}>EMAIL ADDRESS</span>
                   {editMode ? (
@@ -302,7 +311,6 @@ export default function UserProfile({ navigate, onLogout }) {
                   <h3 style={S.panelTitle}>My Bookings</h3>
                   <p style={S.panelSub}>{bookings.length} reservation{bookings.length !== 1 ? "s" : ""} found</p>
                 </div>
-                <button style={S.reserveBtn} onClick={() => navigate("book")}>+ New Reservation</button>
               </div>
 
               {bookings.length === 0 ? (

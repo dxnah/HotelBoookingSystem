@@ -28,31 +28,21 @@ export default function UserLogin({ navigate, onLoginSuccess }) {
     }
     setLoading(true); setError("");
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/v1/auth/token/login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: form.username, password: form.password }),
-      });
-      const data = await res.json();
-      if (res.ok && data.auth_token) {
-        sessionStorage.setItem("userToken", data.auth_token);
-        sessionStorage.setItem("userUsername", form.username);
-        const meRes = await fetch("http://127.0.0.1:8000/api/v1/auth/users/me/", {
-          headers: { "Authorization": `Token ${data.auth_token}` },
-        });
-        if (meRes.ok) {
-          const me = await meRes.json();
-          sessionStorage.setItem("userData", JSON.stringify(me));
-        }
-        showToast("Welcome back! Signing you in...");
-        setTimeout(() => {
-          onLoginSuccess();
-          navigate("userprofile");
-        }, 800);
-      } else {
-        setError(data.non_field_errors?.[0] || "Invalid credentials. Please try again.");
-        triggerShake(); setForm(f => ({ ...f, password: "" }));
-      }
+    const res = await fetch("http://127.0.0.1:8000/api/v1/user/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: form.username, password: form.password }),
+    });
+    const data = await res.json();
+    if (res.ok && data.access) {
+      sessionStorage.setItem("userToken", data.access);
+      sessionStorage.setItem("userData", JSON.stringify(data.user));
+      showToast("Welcome back! Signing you in...");
+      setTimeout(() => { onLoginSuccess(); navigate("userprofile"); }, 800);
+    } else {
+      setError(data.error || "Invalid credentials. Please try again.");
+      triggerShake();
+    }
     } catch {
       setError("Cannot connect to server. Please try again.");
       triggerShake();
@@ -73,41 +63,39 @@ export default function UserLogin({ navigate, onLoginSuccess }) {
     }
     setLoading(true); setError("");
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/v1/auth/users/", {
+    const res = await fetch("http://127.0.0.1:8000/api/v1/user/register/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: form.email,
+        password: form.password,
+        first_name: form.first_name,
+        last_name: form.last_name,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok && data.access) {
+      sessionStorage.setItem("userToken", data.access);
+      sessionStorage.setItem("userData", JSON.stringify(data.user));
+
+      const fullName = [form.first_name, form.last_name].filter(Boolean).join(" ") || "Guest";
+      await fetch("http://127.0.0.1:8000/api/v1/clients/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: form.username,
-          password: form.password,
-          re_password: form.confirmPassword,
+          name: fullName,
           email: form.email,
-          first_name: form.first_name,
-          last_name: form.last_name,
+          phone: "",
         }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        const loginRes = await fetch("http://127.0.0.1:8000/api/v1/auth/token/login/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: form.username, password: form.password }),
-        });
-        const loginData = await loginRes.json();
-        if (loginRes.ok && loginData.auth_token) {
-          sessionStorage.setItem("userToken", loginData.auth_token);
-          sessionStorage.setItem("userData", JSON.stringify(data));
-          sessionStorage.setItem("userUsername", form.username);
-          showToast("Account created! Redirecting...");
-          setTimeout(() => {
-            onLoginSuccess();
-            navigate("userprofile");
-          }, 800);
-        }
-      } else {
-        const msgs = Object.values(data).flat();
-        setError(msgs[0] || "Registration failed. Please try again.");
-        triggerShake();
-      }
+
+      showToast("Account created! Redirecting...");
+      setTimeout(() => { onLoginSuccess(); navigate("userprofile"); }, 800);
+    } else {
+      const msgs = Object.values(data).flat();
+      setError(msgs[0] || "Registration failed.");
+      triggerShake();
+    }
     } catch {
       setError("Cannot connect to server. Please try again.");
       triggerShake();

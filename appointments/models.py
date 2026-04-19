@@ -137,6 +137,3 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"{self.client.name} - Room {self.room.room_number} ({self.check_in} to {self.check_out})"
-    
-
-    AUTH_USER_MODEL = 'appointments.User'

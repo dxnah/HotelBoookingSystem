@@ -109,7 +109,23 @@ export default function ViewBookings({ navigate, goBack, previousPage }) {
         const res = await fetch(`${API_BASE}/bookings/`);
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
-        setBookings(Array.isArray(data) ? data : []);
+        const allBookings = Array.isArray(data) ? data : [];
+
+        // Filter by logged-in user if session exists
+        const userData = sessionStorage.getItem("userData");
+        if (userData) {
+          const user = JSON.parse(userData);
+          const userEmail = user.email?.toLowerCase();
+          const userName = `${user.first_name || ""} ${user.last_name || ""}`.trim().toLowerCase();
+          const filtered = allBookings.filter(b =>
+            (b.client_name || "").toLowerCase() === userName ||
+            (b.client_email || "").toLowerCase() === userEmail
+          );
+          setBookings(filtered);
+        } else {
+          // Not logged in — show all (guest view)
+          setBookings(allBookings);
+        }
       } catch {
         setError("Could not load bookings. Is the Django server running?");
       } finally {
