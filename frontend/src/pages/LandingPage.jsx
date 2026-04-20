@@ -115,13 +115,10 @@ export default function LandingPage({ navigate, onAdminClick, scrollToFeatures, 
               <button style={styles.navLink} onClick={() => navigate("floormap")}>Floor Map</button>
               <button style={styles.navLink} onClick={() => navigate("bookings")}>My Bookings</button>
               <button style={styles.navBtn} onClick={() => navigate("userprofile")}>👤 My Account</button>
-              <button style={styles.navBtn} onClick={onAdminClick || (() => navigate("admin"))}>Admin</button>
             </>
           ) : (
-            <>
-              <button style={styles.navBtn} onClick={() => navigate("userlogin")}>Sign In</button>
-              <button style={styles.navBtn} onClick={onAdminClick || (() => navigate("admin"))}>Admin</button>
-            </>
+            // Before login: empty nav — logo lang ang makita
+            null
           )}
         </div>
       </nav>
@@ -143,19 +140,21 @@ export default function LandingPage({ navigate, onAdminClick, scrollToFeatures, 
           </p>
 
           {isUserAuthenticated ? (
-            <div style={styles.heroBtns}>
-              <button style={styles.heroBtn} onClick={() => navigate("book")}>Reserve a Room</button>
-              <button style={styles.heroBtnOutline} onClick={() => navigate("rooms")}>Our Accommodations</button>
-            </div>
+            <>
+              <div style={styles.heroBtns}>
+                <button style={styles.heroBtn} onClick={() => navigate("book")}>Reserve a Room</button>
+                <button style={styles.heroBtnOutline} onClick={() => navigate("rooms")}>Our Accommodations</button>
+              </div>
+              {/* Discover Our Story — after login lang */}
+              <div style={styles.heroAboutWrap}>
+                <button style={styles.heroAboutBtn} onClick={() => navigate("about")}>✦ Discover Our Story ✦</button>
+              </div>
+            </>
           ) : (
             <div style={styles.heroBtns}>
               <button style={styles.heroBtn} onClick={() => navigate("userlogin")}>Sign In</button>
             </div>
           )}
-
-          <div style={styles.heroAboutWrap}>
-            <button style={styles.heroAboutBtn} onClick={() => navigate("about")}>✦ Discover Our Story ✦</button>
-          </div>
         </div>
       </section>
 
