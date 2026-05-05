@@ -1,13 +1,14 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, BasePermission
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
-from .models import Hotel, Room, Client, Booking, User
+from .models import Hotel, Room, Client, Booking, User, Author
 from .serializers import (
     HotelSerializer, RoomSerializer, ClientSerializer, BookingSerializer,
-    UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer
+    UserRegistrationSerializer, UserLoginSerializer, UserProfileSerializer,
+    AuthorSerializer
 )
 
 
@@ -154,3 +155,26 @@ class UserProfileView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        from rest_framework.permissions import IsAuthenticated, BasePermission
+
+class IsOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
+
+class AuthorListCreate(generics.ListCreateAPIView):
+    serializer_class = AuthorSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Author.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class AuthorDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AuthorSerializer
+    permission_classes = [IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return Author.objects.filter(user=self.request.user)
