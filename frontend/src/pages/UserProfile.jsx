@@ -10,39 +10,11 @@ function SkeletonBlock({ width = "100%", height = "20px", style = {} }) {
   );
 }
 
-function Toast({ toast }) {
-  if (!toast) return null;
-  return (
-    <div style={{
-      position: "fixed", top: "24px", right: "24px", zIndex: 9999,
-      padding: "12px 20px", fontFamily: "'Jost', sans-serif", fontSize: "13px",
-      letterSpacing: "0.5px", display: "flex", alignItems: "center",
-      animation: "toastIn 0.3s ease forwards", backdropFilter: "blur(10px)",
-      minWidth: "260px",
-      background: toast.type === "success" ? "rgba(126,184,126,0.15)" : "rgba(201,123,110,0.15)",
-      border: `1px solid ${toast.type === "success" ? "rgba(126,184,126,0.4)" : "rgba(201,123,110,0.4)"}`,
-      color: toast.type === "success" ? "#7eb87e" : "#c97b6e",
-    }}>
-      <span style={{ marginRight: "8px" }}>{toast.type === "success" ? "✓" : "⚠"}</span>
-      {toast.message}
-    </div>
-  );
-}
-
 export default function UserProfile({ navigate, onLogout }) {
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("profile");
-  const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState(null);
-
-  const showToast = (message, type = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
 
   useEffect(() => {
     const token = sessionStorage.getItem("userToken");
@@ -55,27 +27,31 @@ export default function UserProfile({ navigate, onLogout }) {
         if (cached) {
           const parsed = JSON.parse(cached);
           setUser(parsed);
-          setEditForm({
-            first_name: parsed.first_name || "",
-            last_name: parsed.last_name || "",
-            email: parsed.email || "",
-          });
         }
-        const res = await fetch("http://127.0.0.1:8000/api/v1/auth/users/me/", {
-          headers: { "Authorization": `Token ${token}` },
+        const res = await fetch("http://127.0.0.1:8000/api/v1/user/profile/", {
+          headers: { "Authorization": `Bearer ${token}` },
         });
         if (res.ok) {
           const me = await res.json();
           sessionStorage.setItem("userData", JSON.stringify(me));
           setUser(me);
-          setEditForm({ first_name: me.first_name || "", last_name: me.last_name || "", email: me.email || "" });
         }
-        const bRes = await fetch(`${API_BASE}/bookings/`, {
-          headers: { "Authorization": `Token ${token}` },
-        });
+        const bRes = await fetch(`${API_BASE}/bookings/`);
         if (bRes.ok) {
-          const bData = await bRes.json();
-          setBookings(Array.isArray(bData) ? bData : []);
+          const allBookings = await bRes.json();
+          const cached = sessionStorage.getItem("userData");
+          if (cached) {
+            const u = JSON.parse(cached);
+            const userEmail = (u.email || "").toLowerCase();
+            const userName = `${u.first_name || ""} ${u.last_name || ""}`.trim().toLowerCase();
+            const myBookings = allBookings.filter(b =>
+              (b.client_name || "").toLowerCase() === userName ||
+              (b.client_email || "").toLowerCase() === userEmail
+            );
+            setBookings(myBookings);
+          } else {
+            setBookings(Array.isArray(allBookings) ? allBookings : []);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -85,31 +61,6 @@ export default function UserProfile({ navigate, onLogout }) {
     };
     loadUser();
   }, [navigate]);
-
-  const handleSave = async () => {
-    const token = sessionStorage.getItem("userToken");
-    setSaving(true);
-    try {
-      const res = await fetch("http://127.0.0.1:8000/api/v1/auth/users/me/", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", "Authorization": `Token ${token}` },
-        body: JSON.stringify(editForm),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setUser(updated);
-        sessionStorage.setItem("userData", JSON.stringify(updated));
-        setEditMode(false);
-        showToast("Profile updated successfully.");
-      } else {
-        showToast("Failed to update. Please try again.", "error");
-      }
-    } catch {
-      showToast("Network error.", "error");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleLogout = () => {
     sessionStorage.removeItem("userToken");
@@ -131,7 +82,6 @@ export default function UserProfile({ navigate, onLogout }) {
     <div style={S.page}>
       <style>{`
         @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
       `}</style>
       <nav style={S.nav}>
         <div style={{ width: "100px" }} />
@@ -140,19 +90,17 @@ export default function UserProfile({ navigate, onLogout }) {
       </nav>
       <div style={{ display: "flex", minHeight: "calc(100vh - 65px)" }}>
         <aside style={{ ...S.sidebar, gap: "20px" }}>
-          <SkeletonBlock width="80px" height="80px" style={{ borderRadius: "50%", alignSelf: "center" }} />
+          <SkeletonBlock width="96px" height="96px" style={{ borderRadius: "50%", alignSelf: "center" }} />
           <SkeletonBlock width="140px" height="22px" style={{ alignSelf: "center" }} />
           <SkeletonBlock width="100px" height="14px" style={{ alignSelf: "center" }} />
           <SkeletonBlock width="100%" height="1px" />
           <SkeletonBlock width="100%" height="40px" />
           <SkeletonBlock width="100%" height="40px" />
-          <SkeletonBlock width="100%" height="40px" />
         </aside>
-        <main style={{ flex: 1, padding: "40px 48px", display: "flex", flexDirection: "column", gap: "24px" }}>
+        <main style={{ flex: 1, padding: "48px 56px", display: "flex", flexDirection: "column", gap: "24px" }}>
           <SkeletonBlock width="200px" height="32px" />
-          <SkeletonBlock width="100%" height="80px" />
-          <SkeletonBlock width="100%" height="80px" />
-          <SkeletonBlock width="100%" height="80px" />
+          <SkeletonBlock width="100%" height="100px" />
+          <SkeletonBlock width="100%" height="100px" />
         </main>
       </div>
     </div>
@@ -161,133 +109,136 @@ export default function UserProfile({ navigate, onLogout }) {
   return (
     <div style={S.page}>
       <style>{`
-        @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
-        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
-        .profile-fade { animation: fadeIn 0.4s ease forwards; }
-        .tab-btn:hover { color: #c9a96e !important; }
-        .edit-input:focus { border-color: #c9a96e !important; outline: none; }
-        .booking-row:hover { background: rgba(201,169,110,0.04) !important; }
+        @keyframes goldPulse { 0%,100%{box-shadow:0 0 0 0 rgba(201,169,110,0)} 50%{box-shadow:0 0 18px 2px rgba(201,169,110,0.13)} }
+        .profile-fade { animation: fadeIn 0.5s ease forwards; }
+        .tab-btn:hover { color: #c9a96e !important; background: rgba(201,169,110,0.05) !important; }
+        .booking-row:hover { background: rgba(201,169,110,0.05) !important; }
+        .reserve-btn-hover:hover { background: #b8965c !important; }
+        .back-btn-hover:hover { color: #c9a96e !important; border-color: rgba(201,169,110,0.4) !important; }
+        .logout-btn-hover:hover { color: #c97b6e !important; border-color: rgba(201,123,110,0.4) !important; }
       `}</style>
 
-      <Toast toast={toast} />
-
+      {/* NAV */}
       <nav style={S.nav}>
-        <button style={S.backBtn} onClick={() => navigate("landing")}>← Back to Home</button>
+        <button className="back-btn-hover" style={S.backBtn} onClick={() => navigate("landing")}>← Back to Home</button>
         <div style={S.logo}>GRAND<span style={S.logoGold}>VELOUR</span></div>
-        <button style={S.logoutBtn} onClick={handleLogout}>Sign Out</button>
+        <button className="logout-btn-hover" style={S.logoutBtn} onClick={handleLogout}>Sign Out</button>
       </nav>
 
       <div className="profile-fade" style={S.content}>
+
+        {/* SIDEBAR */}
         <aside style={S.sidebar}>
+          {/* Avatar */}
           <div style={S.avatarWrap}>
-            <div style={S.avatar}>{initials}</div>
-            <div style={S.avatarRing} />
+            <div style={S.avatarOuter}>
+              <div style={S.avatar}>{initials}</div>
+            </div>
+            <div style={S.onlineDot} />
           </div>
+
           <h2 style={S.sidebarName}>{fullName}</h2>
-          <p style={S.sidebarUsername}>@{user?.username}</p>
-          <div style={S.sidebarDivider} />
-          <p style={S.memberSince}>
-            MEMBER SINCE<br />
-            <span style={{ color: "#c9a96e", fontFamily: "'Cormorant Garamond', serif", fontSize: "16px", fontWeight: 400 }}>
-              {user?.date_joined ? new Date(user.date_joined).toLocaleDateString("en-PH", { year: "numeric", month: "long" }) : "2024"}
+          <p style={S.sidebarEmail}>{user?.email}</p>
+
+          {/* Guest ID badge */}
+          <div style={S.guestBadge}>
+            <span style={S.guestBadgeLabel}>GUEST</span>
+            <span style={S.guestBadgeId}>GV-{String(user?.id || "0000").padStart(6, "0")}</span>
+          </div>
+
+          <div style={S.divider} />
+
+          {/* Member since */}
+          <div style={S.memberBlock}>
+            <span style={S.memberLabel}>MEMBER SINCE</span>
+            <span style={S.memberDate}>
+              {user?.date_joined
+                ? new Date(user.date_joined).toLocaleDateString("en-PH", { year: "numeric", month: "long" })
+                : "2024"}
             </span>
-          </p>
-          <div style={S.sidebarDivider} />
+          </div>
+
+          <div style={S.divider} />
+
+          {/* Nav tabs */}
           <nav style={S.sideNav}>
             {[
-              { id: "profile", icon: "👤", label: "Profile Details" },
-              { id: "bookings", icon: "📋", label: "My Bookings" },
+              { id: "profile", icon: "◈", label: "Profile Details" },
+              { id: "bookings", icon: "◉", label: "My Bookings" },
             ].map(t => (
               <button key={t.id} className="tab-btn"
                 style={{ ...S.sideNavBtn, ...(activeTab === t.id ? S.sideNavActive : {}) }}
                 onClick={() => setActiveTab(t.id)}>
-                <span style={{ marginRight: "10px" }}>{t.icon}</span>{t.label}
+                <span style={{ marginRight: "12px", fontSize: "14px", opacity: 0.7 }}>{t.icon}</span>
+                {t.label}
+                {activeTab === t.id && <span style={S.activeArrow}>›</span>}
               </button>
             ))}
           </nav>
-          <div style={{ marginTop: "auto", paddingTop: "24px" }}>
-            <button style={S.reserveBtn} onClick={() => navigate("book")}>Reserve a Room →</button>
-          </div>
+
+          <div style={{ flex: 1 }} />
+
+          {/* Reserve button */}
+          <button className="reserve-btn-hover" style={S.reserveBtn} onClick={() => navigate("book")}>
+            Reserve a Room →
+          </button>
         </aside>
 
+        {/* MAIN CONTENT */}
         <main style={S.main}>
+
+          {/* ── PROFILE TAB ── */}
           {activeTab === "profile" && (
             <div>
+              {/* Header */}
               <div style={S.panelHeader}>
                 <div>
+                  <div style={S.panelEyebrow}>ACCOUNT</div>
                   <h3 style={S.panelTitle}>Profile Details</h3>
-                  <p style={S.panelSub}>Manage your personal information</p>
+                  <p style={S.panelSub}>Your personal information on file</p>
                 </div>
-                {!editMode ? (
-                  <button style={S.editBtn} onClick={() => setEditMode(true)}>Edit Profile</button>
-                ) : (
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button style={S.cancelBtn} onClick={() => { setEditMode(false); setEditForm({ first_name: user?.first_name || "", last_name: user?.last_name || "", email: user?.email || "" }); }}>Cancel</button>
-                    <button style={{ ...S.saveBtn, opacity: saving ? 0.7 : 1 }} onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</button>
+                <div style={S.statusPill}>
+                  <span style={S.statusDot} />
+                  Active Guest
+                </div>
+              </div>
+
+              {/* Info cards */}
+              <div style={S.infoGrid}>
+                {[
+                  { label: "EMAIL ADDRESS", value: user?.email, icon: "✉" },
+                  { label: "FIRST NAME", value: user?.first_name, icon: "◈" },
+                  { label: "LAST NAME", value: user?.last_name, icon: "◈" },
+                  { label: "GUEST ID", value: `GV-${String(user?.id || "0000").padStart(6, "0")}`, icon: "◉", gold: true },
+                ].map((item, i) => (
+                  <div key={i} style={S.infoCard}>
+                    <div style={S.infoCardTop}>
+                      <span style={S.infoCardIcon}>{item.icon}</span>
+                      <span style={S.infoCardLabel}>{item.label}</span>
+                    </div>
+                    <span style={{ ...S.infoCardValue, ...(item.gold ? { color: "#c9a96e", fontSize: "15px", letterSpacing: "2px", fontFamily: "'Jost', sans-serif" } : {}) }}>
+                      {item.value || <span style={{ color: "#2a2520" }}>—</span>}
+                    </span>
                   </div>
-                )}
+                ))}
               </div>
 
-              <div style={S.profileGrid}>
-                <div style={S.infoBlock}>
-                  <span style={S.infoLabel}>USERNAME</span>
-                  <span style={S.infoValue}>{user?.username}</span>
+              {/* Security section */}
+              <div style={{ marginTop: "36px" }}>
+                <div style={S.sectionHeader}>
+                  <div style={S.sectionLine} />
+                  <span style={S.sectionTitle}>SECURITY</span>
+                  <div style={S.sectionLine} />
                 </div>
-                <div style={S.infoBlock}>
-                  <span style={S.infoLabel}>EMAIL ADDRESS</span>
-                  {editMode ? (
-                    <input type="email" value={editForm.email} className="edit-input"
-                      onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
-                      style={S.editInput} />
-                  ) : (
-                    <span style={S.infoValue}>{user?.email || <span style={{ color: "#4a3f32" }}>—</span>}</span>
-                  )}
-                </div>
-                <div style={S.infoBlock}>
-                  <span style={S.infoLabel}>FIRST NAME</span>
-                  {editMode ? (
-                    <input type="text" value={editForm.first_name} className="edit-input"
-                      onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
-                      style={S.editInput} />
-                  ) : (
-                    <span style={S.infoValue}>{user?.first_name || <span style={{ color: "#4a3f32" }}>—</span>}</span>
-                  )}
-                </div>
-                <div style={S.infoBlock}>
-                  <span style={S.infoLabel}>LAST NAME</span>
-                  {editMode ? (
-                    <input type="text" value={editForm.last_name} className="edit-input"
-                      onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
-                      style={S.editInput} />
-                  ) : (
-                    <span style={S.infoValue}>{user?.last_name || <span style={{ color: "#4a3f32" }}>—</span>}</span>
-                  )}
-                </div>
-                <div style={S.infoBlock}>
-                  <span style={S.infoLabel}>GUEST ID</span>
-                  <span style={S.infoValue}>
-                    <span style={{ fontFamily: "'Jost', sans-serif", color: "#c9a96e", fontSize: "13px", letterSpacing: "1px" }}>
-                      GV-{String(user?.id || "0000").padStart(6, "0")}
-                    </span>
-                  </span>
-                </div>
-                <div style={S.infoBlock}>
-                  <span style={S.infoLabel}>ACCOUNT STATUS</span>
-                  <span style={S.infoValue}>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "1px", color: "#7eb87e" }}>
-                      ● Active Guest
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ marginTop: "32px" }}>
-                <h4 style={S.sectionTitle}>Security</h4>
                 <div style={S.securityCard}>
-                  <div>
-                    <p style={{ fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#e8dcc8", margin: "0 0 4px" }}>Password</p>
-                    <p style={{ fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#4a3f32", margin: 0 }}>Last updated: unknown</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                    <div style={S.securityIcon}>🔑</div>
+                    <div>
+                      <p style={S.securityLabel}>Password</p>
+                      <p style={S.securitySub}>Last updated: unknown</p>
+                    </div>
                   </div>
                   <button style={S.securityBtn} onClick={() => navigate("landing")}>Change Password</button>
                 </div>
@@ -295,44 +246,51 @@ export default function UserProfile({ navigate, onLogout }) {
             </div>
           )}
 
+          {/* ── BOOKINGS TAB ── */}
           {activeTab === "bookings" && (
             <div>
               <div style={S.panelHeader}>
                 <div>
+                  <div style={S.panelEyebrow}>HISTORY</div>
                   <h3 style={S.panelTitle}>My Bookings</h3>
-                  <p style={S.panelSub}>{bookings.length} reservation{bookings.length !== 1 ? "s" : ""} found</p>
+                  <p style={S.panelSub}>{bookings.length} reservation{bookings.length !== 1 ? "s" : ""} on record</p>
                 </div>
-                <button style={S.reserveBtn} onClick={() => navigate("book")}>+ New Reservation</button>
+                <div style={S.bookingCount}>
+                  <span style={{ fontSize: "28px", fontWeight: 300, color: "#c9a96e", fontFamily: "'Cormorant Garamond', serif" }}>{bookings.length}</span>
+                  <span style={{ fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#4a3f32" }}>TOTAL</span>
+                </div>
               </div>
 
               {bookings.length === 0 ? (
                 <div style={S.emptyState}>
-                  <div style={{ fontSize: "40px", marginBottom: "16px" }}>🏨</div>
-                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", color: "#e8dcc8", margin: "0 0 8px" }}>No reservations yet</p>
-                  <p style={{ fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#4a3f32", margin: "0 0 24px" }}>Your booking history will appear here.</p>
-                  <button style={S.reserveBtn} onClick={() => navigate("book")}>Reserve a Room →</button>
+                  <div style={S.emptyIcon}>🏨</div>
+                  <p style={S.emptyTitle}>No reservations yet</p>
+                  <p style={S.emptySub}>Your booking history will appear here once you make a reservation.</p>
+                  <button className="reserve-btn-hover" style={{ ...S.reserveBtn, width: "auto", padding: "12px 32px" }} onClick={() => navigate("book")}>
+                    Reserve a Room →
+                  </button>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1px", border: "1px solid #1e1a16" }}>
-                  <div style={{ ...S.tableRow, background: "#0f0e0c", borderBottom: "1px solid #2a2520" }}>
+                <div style={S.tableWrap}>
+                  {/* Table header */}
+                  <div style={S.tableHeader}>
                     {["BOOKING REF", "ROOM", "CHECK-IN", "CHECK-OUT", "STATUS"].map(h => (
                       <span key={h} style={S.tableHead}>{h}</span>
                     ))}
                   </div>
+                  {/* Table rows */}
                   {bookings.map((b, i) => (
                     <div key={b.id} className="booking-row"
-                      style={{ ...S.tableRow, background: i % 2 === 0 ? "#0d0c0a" : "#111", transition: "background 0.2s" }}>
-                      <span style={{ fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#c9a96e", letterSpacing: "1px" }}>
-                        GV-{String(b.id).padStart(6, "0")}
-                      </span>
+                      style={{ ...S.tableRow, background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.01)", transition: "background 0.2s" }}>
+                      <span style={S.bookingRef}>GV-{String(b.id).padStart(6, "0")}</span>
                       <span style={S.tableCell}>Room {b.room}</span>
                       <span style={S.tableCell}>{b.check_in}</span>
                       <span style={S.tableCell}>{b.check_out}</span>
                       <span style={{
-                        fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase",
+                        ...S.statusTag,
                         color: b.status === "confirmed" ? "#7eb87e" : b.status === "cancelled" ? "#c97b6e" : "#c9a96e",
-                        border: `1px solid ${b.status === "confirmed" ? "#7eb87e" : b.status === "cancelled" ? "#c97b6e" : "#c9a96e"}`,
-                        padding: "3px 8px",
+                        borderColor: b.status === "confirmed" ? "rgba(126,184,126,0.3)" : b.status === "cancelled" ? "rgba(201,123,110,0.3)" : "rgba(201,169,110,0.3)",
+                        background: b.status === "confirmed" ? "rgba(126,184,126,0.07)" : b.status === "cancelled" ? "rgba(201,123,110,0.07)" : "rgba(201,169,110,0.07)",
                       }}>
                         {b.status}
                       </span>
@@ -349,42 +307,91 @@ export default function UserProfile({ navigate, onLogout }) {
 }
 
 const S = {
-  page: { background: "#0d0d0d", minHeight: "100vh", color: "#e8dcc8", fontFamily: "'Cormorant Garamond', serif" },
-  nav: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 60px", borderBottom: "1px solid #1e1a16" },
-  backBtn: { background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.2)", color: "#a09080", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "8px 16px" },
-  logo: { fontSize: "20px", fontWeight: 600, letterSpacing: "6px", color: "#e8dcc8" },
+  page: { background: "#0a0908", minHeight: "100vh", color: "#e8dcc8", fontFamily: "'Cormorant Garamond', serif" },
+
+  // Nav
+  nav: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 56px", borderBottom: "1px solid rgba(201,169,110,0.1)", background: "rgba(10,9,8,0.9)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 },
+  backBtn: { background: "transparent", border: "1px solid rgba(201,169,110,0.15)", color: "#7a6f62", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "1.5px", padding: "8px 18px", transition: "all 0.2s", textTransform: "uppercase" },
+  logo: { fontSize: "18px", fontWeight: 600, letterSpacing: "7px", color: "#e8dcc8" },
   logoGold: { color: "#c9a96e" },
-  logoutBtn: { background: "transparent", border: "1px solid #2a2520", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", padding: "8px 16px", textTransform: "uppercase", transition: "all 0.2s" },
-  content: { display: "flex", gap: "0", minHeight: "calc(100vh - 65px)" },
-  sidebar: { width: "280px", flexShrink: 0, borderRight: "1px solid #1e1a16", padding: "40px 32px", display: "flex", flexDirection: "column", alignItems: "center" },
+  logoutBtn: { background: "transparent", border: "1px solid #1e1a16", color: "#4a3f32", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", padding: "8px 18px", textTransform: "uppercase", transition: "all 0.2s" },
+
+  // Layout
+  content: { display: "flex", minHeight: "calc(100vh - 65px)" },
+
+  // Sidebar
+  sidebar: { width: "290px", flexShrink: 0, borderRight: "1px solid rgba(201,169,110,0.08)", padding: "44px 32px", display: "flex", flexDirection: "column", alignItems: "center", background: "linear-gradient(180deg, #0d0c0a 0%, #0a0908 100%)" },
   avatarWrap: { position: "relative", marginBottom: "20px" },
-  avatar: { width: "80px", height: "80px", borderRadius: "50%", background: "linear-gradient(135deg, #c9a96e, #8a6d3a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", fontWeight: 600, color: "#0d0d0d", letterSpacing: "1px", position: "relative", zIndex: 1 },
-  avatarRing: { position: "absolute", inset: "-4px", borderRadius: "50%", border: "1px solid rgba(201,169,110,0.3)", top: "-4px", left: "-4px", right: "-4px", bottom: "-4px" },
-  sidebarName: { fontSize: "22px", fontWeight: 400, color: "#e8dcc8", margin: "0 0 4px", textAlign: "center" },
-  sidebarUsername: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#4a3f32", letterSpacing: "1px", margin: "0 0 20px", textAlign: "center" },
-  sidebarDivider: { width: "100%", height: "1px", background: "#1e1a16", margin: "8px 0 16px" },
-  memberSince: { fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#6a5f52", textAlign: "center", textTransform: "uppercase", lineHeight: 2, marginBottom: "8px" },
-  sideNav: { width: "100%", display: "flex", flexDirection: "column", gap: "4px" },
-  sideNavBtn: { width: "100%", background: "none", border: "none", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "12px", letterSpacing: "1px", padding: "10px 12px", textAlign: "left", transition: "all 0.2s" },
-  sideNavActive: { background: "rgba(201,169,110,0.08)", color: "#c9a96e", borderLeft: "2px solid #c9a96e", paddingLeft: "10px" },
-  reserveBtn: { background: "#c9a96e", border: "none", color: "#0d0d0d", padding: "10px 20px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", cursor: "pointer", fontWeight: 500, width: "100%" },
-  main: { flex: 1, padding: "40px 48px" },
-  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "28px" },
-  panelTitle: { fontSize: "28px", fontWeight: 300, color: "#e8dcc8", margin: "0 0 4px" },
-  panelSub: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#4a3f32", margin: 0 },
-  editBtn: { background: "transparent", border: "1px solid rgba(201,169,110,0.4)", color: "#c9a96e", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", padding: "8px 20px", textTransform: "uppercase" },
-  cancelBtn: { background: "transparent", border: "1px solid #2a2520", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "1px", padding: "8px 16px" },
-  saveBtn: { background: "#c9a96e", border: "none", color: "#0d0d0d", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2px", padding: "8px 20px", textTransform: "uppercase", fontWeight: 500 },
-  profileGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", border: "1px solid #1e1a16" },
-  infoBlock: { padding: "20px 24px", borderRight: "1px solid #1e1a16", borderBottom: "1px solid #1e1a16", display: "flex", flexDirection: "column", gap: "8px" },
-  infoLabel: { fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "2px", color: "#4a3f32", textTransform: "uppercase" },
-  infoValue: { fontSize: "18px", fontWeight: 300, color: "#e8dcc8" },
-  editInput: { background: "#151412", border: "1px solid #3a3530", color: "#e8dcc8", padding: "10px 12px", fontFamily: "'Jost', sans-serif", fontSize: "14px", width: "100%", boxSizing: "border-box", transition: "border-color 0.2s", outline: "none" },
-  sectionTitle: { fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "3px", color: "#4a3f32", textTransform: "uppercase", margin: "0 0 16px" },
-  securityCard: { border: "1px solid #1e1a16", padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" },
-  securityBtn: { background: "transparent", border: "1px solid #2a2520", color: "#6a5f52", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "1px", padding: "8px 16px" },
-  emptyState: { padding: "60px 40px", textAlign: "center", border: "1px solid #1e1a16" },
-  tableRow: { display: "grid", gridTemplateColumns: "1.2fr 0.8fr 1fr 1fr 0.8fr", gap: "16px", padding: "14px 20px", alignItems: "center" },
-  tableHead: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "2px", color: "#4a3f32", textTransform: "uppercase" },
-  tableCell: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#8a7a68" },
+  avatarOuter: { width: "96px", height: "96px", borderRadius: "50%", padding: "3px", background: "linear-gradient(135deg, #c9a96e, #5a4020)", animation: "goldPulse 3s ease-in-out infinite" },
+  avatar: { width: "100%", height: "100%", borderRadius: "50%", background: "linear-gradient(135deg, #1e1a14, #2a2218)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "30px", fontWeight: 500, color: "#c9a96e", letterSpacing: "1px", fontFamily: "'Cormorant Garamond', serif" },
+  onlineDot: { position: "absolute", bottom: "4px", right: "4px", width: "12px", height: "12px", borderRadius: "50%", background: "#7eb87e", border: "2px solid #0a0908" },
+  sidebarName: { fontSize: "22px", fontWeight: 400, color: "#e8dcc8", margin: "0 0 4px", textAlign: "center", letterSpacing: "0.5px" },
+  sidebarEmail: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#3a3530", letterSpacing: "0.5px", margin: "0 0 16px", textAlign: "center" },
+
+  // Guest badge
+  guestBadge: { display: "flex", alignItems: "center", gap: "8px", background: "rgba(201,169,110,0.07)", border: "1px solid rgba(201,169,110,0.15)", padding: "6px 14px", marginBottom: "20px" },
+  guestBadgeLabel: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "3px", color: "#6a5f52", textTransform: "uppercase" },
+  guestBadgeId: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#c9a96e", letterSpacing: "2px" },
+
+  divider: { width: "100%", height: "1px", background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.15), transparent)", margin: "4px 0 16px" },
+
+  // Member since
+  memberBlock: { display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", marginBottom: "8px" },
+  memberLabel: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "3px", color: "#3a3530", textTransform: "uppercase" },
+  memberDate: { fontFamily: "'Cormorant Garamond', serif", fontSize: "16px", color: "#c9a96e", fontWeight: 300, letterSpacing: "1px" },
+
+  // Side nav
+  sideNav: { width: "100%", display: "flex", flexDirection: "column", gap: "2px", marginTop: "4px" },
+  sideNavBtn: { width: "100%", background: "none", border: "none", color: "#4a3f32", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "1.5px", padding: "11px 14px", textAlign: "left", transition: "all 0.2s", textTransform: "uppercase", display: "flex", alignItems: "center", borderRadius: "1px" },
+  sideNavActive: { background: "rgba(201,169,110,0.07)", color: "#c9a96e", borderLeft: "2px solid #c9a96e", paddingLeft: "12px" },
+  activeArrow: { marginLeft: "auto", fontSize: "18px", color: "#c9a96e", lineHeight: 1 },
+
+  reserveBtn: { background: "#c9a96e", border: "none", color: "#0a0908", padding: "12px 20px", fontFamily: "'Jost', sans-serif", fontSize: "11px", letterSpacing: "2.5px", textTransform: "uppercase", cursor: "pointer", fontWeight: 600, width: "100%", transition: "background 0.2s", marginTop: "8px" },
+
+  // Main
+  main: { flex: 1, padding: "48px 56px", background: "#0a0908" },
+  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "36px", paddingBottom: "28px", borderBottom: "1px solid rgba(201,169,110,0.08)" },
+  panelEyebrow: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "4px", color: "#3a3530", textTransform: "uppercase", marginBottom: "6px" },
+  panelTitle: { fontSize: "32px", fontWeight: 300, color: "#e8dcc8", margin: "0 0 6px", letterSpacing: "0.5px" },
+  panelSub: { fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#3a3530", margin: 0, letterSpacing: "0.5px" },
+
+  // Status pill
+  statusPill: { display: "flex", alignItems: "center", gap: "8px", background: "rgba(126,184,126,0.07)", border: "1px solid rgba(126,184,126,0.2)", padding: "8px 16px", fontFamily: "'Jost', sans-serif", fontSize: "11px", color: "#7eb87e", letterSpacing: "1.5px", textTransform: "uppercase", alignSelf: "flex-start" },
+  statusDot: { width: "6px", height: "6px", borderRadius: "50%", background: "#7eb87e" },
+
+  // Info grid
+  infoGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" },
+  infoCard: { background: "linear-gradient(135deg, #111009, #0d0c0a)", border: "1px solid rgba(201,169,110,0.08)", padding: "20px 24px", display: "flex", flexDirection: "column", gap: "10px", transition: "border-color 0.2s" },
+  infoCardTop: { display: "flex", alignItems: "center", gap: "8px" },
+  infoCardIcon: { fontSize: "12px", color: "#3a3530" },
+  infoCardLabel: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "3px", color: "#3a3530", textTransform: "uppercase" },
+  infoCardValue: { fontSize: "20px", fontWeight: 300, color: "#e8dcc8", letterSpacing: "0.3px" },
+
+  // Section header with lines
+  sectionHeader: { display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" },
+  sectionLine: { flex: 1, height: "1px", background: "rgba(201,169,110,0.08)" },
+  sectionTitle: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "4px", color: "#3a3530", textTransform: "uppercase", whiteSpace: "nowrap" },
+
+  // Security
+  securityCard: { background: "linear-gradient(135deg, #111009, #0d0c0a)", border: "1px solid rgba(201,169,110,0.08)", padding: "22px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  securityIcon: { fontSize: "24px", width: "44px", height: "44px", background: "rgba(201,169,110,0.06)", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "2px" },
+  securityLabel: { fontFamily: "'Jost', sans-serif", fontSize: "13px", color: "#c8bca8", margin: "0 0 3px", letterSpacing: "0.5px" },
+  securitySub: { fontFamily: "'Jost', sans-serif", fontSize: "10px", color: "#3a3530", margin: 0, letterSpacing: "0.5px" },
+  securityBtn: { background: "transparent", border: "1px solid rgba(201,169,110,0.2)", color: "#c9a96e", cursor: "pointer", fontFamily: "'Jost', sans-serif", fontSize: "10px", letterSpacing: "2px", padding: "9px 20px", textTransform: "uppercase", transition: "all 0.2s" },
+
+  // Bookings
+  bookingCount: { display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" },
+  tableWrap: { border: "1px solid rgba(201,169,110,0.08)", overflow: "hidden" },
+  tableHeader: { display: "grid", gridTemplateColumns: "1.3fr 0.7fr 1fr 1fr 0.8fr", gap: "16px", padding: "12px 24px", background: "rgba(201,169,110,0.04)", borderBottom: "1px solid rgba(201,169,110,0.08)" },
+  tableHead: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "2.5px", color: "#3a3530", textTransform: "uppercase" },
+  tableRow: { display: "grid", gridTemplateColumns: "1.3fr 0.7fr 1fr 1fr 0.8fr", gap: "16px", padding: "16px 24px", alignItems: "center", borderBottom: "1px solid rgba(201,169,110,0.04)" },
+  bookingRef: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#c9a96e", letterSpacing: "1.5px" },
+  tableCell: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#6a5f52", letterSpacing: "0.3px" },
+  statusTag: { fontFamily: "'Jost', sans-serif", fontSize: "9px", letterSpacing: "1.5px", textTransform: "uppercase", border: "1px solid", padding: "4px 10px", display: "inline-block", textAlign: "center" },
+
+  // Empty state
+  emptyState: { display: "flex", flexDirection: "column", alignItems: "center", padding: "72px 40px", border: "1px solid rgba(201,169,110,0.08)", background: "linear-gradient(135deg, #111009, #0d0c0a)" },
+  emptyIcon: { fontSize: "48px", marginBottom: "20px", opacity: 0.5 },
+  emptyTitle: { fontFamily: "'Cormorant Garamond', serif", fontSize: "26px", fontWeight: 300, color: "#e8dcc8", margin: "0 0 10px", letterSpacing: "0.5px" },
+  emptySub: { fontFamily: "'Jost', sans-serif", fontSize: "12px", color: "#3a3530", margin: "0 0 32px", textAlign: "center", lineHeight: 1.8, maxWidth: "340px" },
 };

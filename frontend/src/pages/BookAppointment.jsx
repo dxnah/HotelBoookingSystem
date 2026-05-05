@@ -171,7 +171,25 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [selectedRoomType, setSelectedRoomType] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", guests: "", check_in: "", check_out: "", notes: "" });
+
+  const isLoggedIn = !!sessionStorage.getItem("userToken");
+  const [form, setForm] = useState(() => {
+  const userData = sessionStorage.getItem("userData");
+  if (userData) {
+    const user = JSON.parse(userData);
+    return {
+      name: `${user.first_name || ""} ${user.last_name || ""}`.trim(),
+      email: user.email || "",
+      phone: "",
+      guests: "",
+      check_in: "",
+      check_out: "",
+      notes: "",
+    };
+  }
+  return { name: "", email: "", phone: "", guests: "", check_in: "", check_out: "", notes: "" };
+});
+
   const [formErrors, setFormErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -763,27 +781,27 @@ export default function BookAppointment({ navigate, goBack, previousPage }) {
                   <div>
                     <label style={S.label}>Full Name</label>
                     <input type="text" placeholder="Juan dela Cruz" value={form.name}
-                      onChange={e => setForm({ ...form, name: e.target.value })}
-                      style={S.input} className="gv-input" />
+                    onChange={e => !isLoggedIn && setForm({ ...form, name: e.target.value })}
+                    style={{ ...S.input, ...(isLoggedIn ? { opacity: 0.7, cursor: "not-allowed" } : {}) }}
+                    className="gv-input"
+                    readOnly={isLoggedIn} />
                   </div>
                   <div>
                     <label style={S.label}>Email Address <span style={S.optionalBadge}>Optional</span></label>
-                    <input
-                      type="text"
-                      placeholder="juan@email.com"
-                      value={form.email}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setForm({ ...form, email: val });
-                        if (val && !/^[^\s@]+@[^\s@]+/.test(val)) {
-                          setFormErrors(prev => ({ ...prev, email: "Email must contain @" }));
-                        } else {
-                          setFormErrors(prev => ({ ...prev, email: "" }));
-                        }
-                      }}
-                      style={{ ...S.input, ...(formErrors.email ? { borderColor: "#c97b6e" } : {}) }}
-                      className="gv-input"
-                    />
+                  <input type="text" placeholder="juan@email.com" value={form.email}
+                    onChange={e => {
+                      if (isLoggedIn) return;
+                      const val = e.target.value;
+                      setForm({ ...form, email: val });
+                      if (val && !/^[^\s@]+@[^\s@]+/.test(val)) {
+                        setFormErrors(prev => ({ ...prev, email: "Email must contain @" }));
+                      } else {
+                        setFormErrors(prev => ({ ...prev, email: "" }));
+                      }
+                    }}
+                    style={{ ...S.input, ...(formErrors.email ? { borderColor: "#c97b6e" } : {}), ...(isLoggedIn ? { opacity: 0.7, cursor: "not-allowed" } : {}) }}
+                    className="gv-input"
+                    readOnly={isLoggedIn} />
                     {formErrors.email && <p className="gv-error">⚠ {formErrors.email}</p>}
                   </div>
                   <div>

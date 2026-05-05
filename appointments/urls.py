@@ -17,8 +17,6 @@ urlpatterns = [
     # Bookings
     path('bookings/', views.BookingListCreate.as_view()),
     path('bookings/<int:pk>/', views.BookingDetail.as_view()),
-
-    # Special Actions
     path('bookings/<int:pk>/cancel/', views.CancelBooking.as_view()),
     path('bookings/<int:pk>/reschedule/', views.RescheduleBooking.as_view()),
 
