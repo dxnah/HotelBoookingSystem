@@ -1,9 +1,9 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
-
-
 from django.db import models
+from django.conf import settings
 from decimal import Decimal
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -54,8 +54,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
-
-
 
 
 class Hotel(models.Model):
@@ -128,7 +126,6 @@ class Booking(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # Auto calculate total price based on nights
         if self.check_in and self.check_out and self.room:
             nights = (self.check_out - self.check_in).days
             if nights > 0:

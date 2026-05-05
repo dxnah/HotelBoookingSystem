@@ -33,6 +33,7 @@ class HotelDetail(generics.RetrieveUpdateDestroyAPIView):
 
 # --- Room ---
 class RoomListCreate(generics.ListCreateAPIView):
+    queryset = Room.objects.all()
     serializer_class = RoomSerializer
 
     def get_queryset(self):
@@ -102,14 +103,21 @@ class CancelBooking(APIView):
         try:
             booking = Booking.objects.get(pk=pk)
             if booking.status == 'cancelled':
-                return Response({'error': 'Booking is already cancelled.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'error': 'Booking is already cancelled.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             booking.status = 'cancelled'
             booking.save()
-            booking.room.is_available = True
-            booking.room.save()
-            return Response({'message': 'Booking cancelled successfully.'}, status=status.HTTP_200_OK)
+            return Response(
+                {'message': 'Booking cancelled successfully.'},
+                status=status.HTTP_200_OK
+            )
         except Booking.DoesNotExist:
-            return Response({'error': 'Booking not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': 'Booking not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 # --- Reschedule Booking ---
 class RescheduleBooking(APIView):
@@ -179,3 +187,29 @@ class UserProfileView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# --- Author Permissions ---
+class IsOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
+
+
+# --- Authors ---
+class AuthorListCreate(generics.ListCreateAPIView):
+    serializer_class = AuthorSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Author.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class AuthorDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = AuthorSerializer
+    permission_classes = [IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        return Author.objects.filter(user=self.request.user)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Hotel, Room, Client, Booking, User
+from .models import Hotel, Room, Client, Booking, User, Author
 
 
 class HotelSerializer(serializers.ModelSerializer):
@@ -86,3 +86,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'address', 'age', 'birthday', 'phone', 'date_joined']
         read_only_fields = ['email', 'date_joined']
+
+
+class AuthorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Author
+        fields = ['id', 'first_name', 'last_name']
+        read_only_fields = ['user']
