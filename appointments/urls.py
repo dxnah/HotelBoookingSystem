@@ -26,7 +26,8 @@ urlpatterns = [
     path('user/register/', views.UserRegisterView.as_view()),
     path('user/login/', views.UserLoginView.as_view()),
     path('user/profile/', views.UserProfileView.as_view()),
-]
 
-path('authors/', views.AuthorListCreate.as_view()),
-path('authors/<int:pk>/', views.AuthorDetail.as_view()),
+    # Authors
+    path('authors/', views.AuthorListCreate.as_view()),
+    path('authors/<int:pk>/', views.AuthorDetail.as_view()),
+]
