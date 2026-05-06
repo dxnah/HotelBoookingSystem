@@ -18,6 +18,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)   # superusers always active
         return self.create_user(email, password, **extra_fields)
 
 
@@ -29,7 +30,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     age = models.IntegerField(null=True, blank=True)
     birthday = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=20, blank=True)
-    is_active = models.BooleanField(default=True)
+    # ↓ CHANGED: False so new users must verify email before logging in
+    is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
@@ -74,11 +76,7 @@ class Room(models.Model):
         ('deluxe', 'Deluxe'),
     ]
 
-    hotel = models.ForeignKey(
-        Hotel,
-        on_delete=models.CASCADE,
-        related_name='rooms'
-    )
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name='rooms')
     room_number = models.CharField(max_length=10)
     room_type = models.CharField(max_length=20, choices=ROOM_TYPE_CHOICES)
     price_per_night = models.DecimalField(max_digits=8, decimal_places=2)
@@ -107,14 +105,12 @@ class Booking(models.Model):
         ('rescheduled', 'Rescheduled'),
     ]
 
-    room = models.ForeignKey(
-        Room,
-        on_delete=models.CASCADE,
-        related_name='bookings'
-    )
-    client = models.ForeignKey(
-        Client,
-        on_delete=models.CASCADE,
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='bookings')
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='bookings')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
         related_name='bookings'
     )
     check_in = models.DateField()

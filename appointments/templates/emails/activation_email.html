@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Activate Your Account – Grand Velour</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=Jost:wght@300;400;500&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background-color: #0a0908; font-family: 'Jost', Arial, sans-serif; font-weight: 300; color: #c8b89a; -webkit-font-smoothing: antialiased; }
+    .wrapper { max-width: 580px; margin: 32px auto; padding: 0 16px 48px; }
+
+    /* ── Header ── */
+    .header { background: linear-gradient(160deg, #161208 0%, #0d0c0a 100%); border: 1px solid #2a2216; border-bottom: 2px solid #c9a96e; padding: 36px 48px 32px; text-align: center; }
+    .logo-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 6px; }
+    .logo-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(201,169,110,0.4), transparent); }
+    .logo-text { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 26px; font-weight: 400; letter-spacing: 8px; text-transform: uppercase; color: #f0e6d0; }
+    .logo-text span { color: #c9a96e; }
+    .logo-sub { font-family: 'Jost', Arial, sans-serif; font-size: 9px; letter-spacing: 5px; text-transform: uppercase; color: #4a3f32; margin-top: 2px; }
+
+    /* ── Body ── */
+    .body { background: #0d0c0a; border: 1px solid #2a2216; border-top: none; padding: 48px 48px 40px; }
+    .ornament { text-align: center; font-size: 12px; letter-spacing: 10px; color: rgba(201,169,110,0.35); margin-bottom: 32px; }
+    .greeting { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 32px; font-weight: 300; font-style: italic; color: #f0e6d0; margin-bottom: 20px; line-height: 1.25; }
+    .body-text { font-size: 13px; line-height: 1.9; color: #7a6a58; margin-bottom: 16px; }
+    .body-text strong { color: #a89880; font-weight: 400; }
+
+    /* ── CTA ── */
+    .cta-wrap { text-align: center; margin: 40px 0 32px; }
+    .cta-btn { display: inline-block; background: linear-gradient(135deg, #c9a96e 0%, #e0c07a 50%, #c9a96e 100%); color: #0a0908 !important; font-family: 'Jost', Arial, sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 5px; text-transform: uppercase; text-decoration: none; padding: 18px 52px; }
+    .cta-note { margin-top: 12px; font-size: 10px; color: #3a3020; letter-spacing: 1.5px; }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(201,169,110,0.12), transparent); margin: 32px 0; }
+
+    /* ── Fallback link ── */
+    .fallback { background: #0a0908; border: 1px solid #1e1a12; border-left: 2px solid rgba(201,169,110,0.4); padding: 18px 22px; }
+    .fallback-label { font-size: 10px; letter-spacing: 2px; color: #3a3020; text-transform: uppercase; margin-bottom: 10px; }
+    .fallback-link { font-size: 11px; color: #7a6040; word-break: break-all; text-decoration: none; line-height: 1.6; }
+
+    /* ── Expiry ── */
+    .expiry { text-align: center; font-size: 10px; letter-spacing: 2px; color: #2e2818; text-transform: uppercase; margin-top: 28px; }
+    .expiry span { color: #5a4828; }
+
+    /* ── Footer ── */
+    .footer { margin-top: 28px; text-align: center; }
+    .footer-line { height: 1px; background: linear-gradient(90deg, transparent, rgba(201,169,110,0.08), transparent); margin-bottom: 20px; }
+    .footer-text { font-size: 10px; color: #2a2218; letter-spacing: 1.5px; line-height: 2; }
+    .footer-note { font-size: 10px; color: #1e1a12; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="logo-row">
+        <div class="logo-line"></div>
+        <div class="logo-text">GRAND <span>VELOUR</span></div>
+        <div class="logo-line"></div>
+      </div>
+      <div class="logo-sub">Hotels &amp; Resorts</div>
+    </div>
+
+    <!-- BODY -->
+    <div class="body">
+      <div class="ornament">· · ◈ · ·</div>
+
+      <div class="greeting">Welcome, {{ user.first_name }}.</div>
+
+      <p class="body-text">
+        Thank you for choosing <strong>Grand Velour</strong>. Your account has been created and
+        is one step away from being active.
+      </p>
+      <p class="body-text">
+        To complete your registration and access your guest portal, please confirm your
+        email address by clicking the button below.
+      </p>
+
+      <!-- CTA BUTTON -->
+      <div class="cta-wrap">
+        <a href="{{ activation_link }}" class="cta-btn">Activate My Account</a>
+        <div class="cta-note">Button valid for 24 hours</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- FALLBACK LINK -->
+      <div class="fallback">
+        <div class="fallback-label">If the button doesn't work, copy this link</div>
+        <a href="{{ activation_link }}" class="fallback-link">{{ activation_link }}</a>
+      </div>
+
+      <div class="expiry">
+        Link expires in <span>24 hours</span> &nbsp;·&nbsp; If you did not register, ignore this email.
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div class="footer-line"></div>
+      <div class="footer-text">
+        © 2026 GRAND VELOUR HOTELS &amp; RESORTS<br />
+        This is an automated message — please do not reply.
+      </div>
+      <div class="footer-note">
+        You received this because an account was created using this email address.
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

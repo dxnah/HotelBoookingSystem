@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LandingPage from "./pages/LandingPage";
 import BookAppointment from "./pages/BookAppointment";
 import ViewBookings from "./pages/ViewBookings";
@@ -13,6 +13,7 @@ import UserProfile from "./pages/UserProfile";
 import BookingLookup from "./pages/BookingLookup";
 import HotelDetail from "./pages/HotelDetail";
 import ContactPage from "./pages/ContactPage";
+import ActivatePage from "./pages/ActivatePage"; // ← NEW
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState(
@@ -31,6 +32,22 @@ export default function App() {
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [scrollToFeatures, setScrollToFeatures] = useState(false);
   const [selectedHotelId, setSelectedHotelId] = useState(null);
+  const [activateParams, setActivateParams] = useState(null); // ← NEW
+
+  // ── NEW: On first load, check if the URL is /activate/:uid/:token/ ──────────
+  // When the user clicks the email link, the browser opens:
+  //   http://localhost:5173/activate/MQ/abc123token/
+  // This effect detects that path and switches to the activate page.
+  useEffect(() => {
+    const parts = window.location.pathname.split("/").filter(Boolean);
+    // parts = ["activate", "MQ", "abc123token"]
+    if (parts[0] === "activate" && parts[1] && parts[2]) {
+      setActivateParams({ uid: parts[1], token: parts[2] });
+      setCurrentPage("activate");
+      // Clean the URL so refreshing doesn't re-trigger activation
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
 
   const navigate = (page, data) => {
     if (data && page === "hoteldetail") setSelectedHotelId(data);
@@ -132,6 +149,16 @@ export default function App() {
       )}
       {currentPage === "contact" && (
         <ContactPage navigate={navigate} />
+      )}
+
+      {/* ── NEW: Email activation page ───────────────────────────────────────── */}
+      {currentPage === "activate" && activateParams && (
+        <ActivatePage
+          navigate={navigate}
+          onLoginSuccess={() => setIsUserAuthenticated(true)}
+          uid={activateParams.uid}
+          token={activateParams.token}
+        />
       )}
     </div>
   );
