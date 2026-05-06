@@ -3,8 +3,8 @@ import { useState } from "react";
 export default function UserLogin({ navigate, onLoginSuccess }) {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({
-    username: "", password: "", confirmPassword: "",
-    first_name: "", last_name: "", email: "",
+    email: "", password: "", confirmPassword: "",
+    first_name: "", last_name: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,27 +22,27 @@ export default function UserLogin({ navigate, onLoginSuccess }) {
   };
 
   const handleLogin = async () => {
-    if (!form.username || !form.password) {
-      setError("Please enter both username and password.");
+    if (!form.email || !form.password) {
+      setError("Please enter both email and password.");
       triggerShake(); return;
     }
     setLoading(true); setError("");
     try {
-    const res = await fetch("http://127.0.0.1:8000/api/v1/user/login/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: form.username, password: form.password }),
-    });
-    const data = await res.json();
-    if (res.ok && data.access) {
-      sessionStorage.setItem("userToken", data.access);
-      sessionStorage.setItem("userData", JSON.stringify(data.user));
-      showToast("Welcome back! Signing you in...");
-      setTimeout(() => { onLoginSuccess(); navigate("userprofile"); }, 800);
-    } else {
-      setError(data.error || "Invalid credentials. Please try again.");
-      triggerShake();
-    }
+      const res = await fetch("http://127.0.0.1:8000/api/v1/user/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email, password: form.password }),
+      });
+      const data = await res.json();
+      if (res.ok && data.access) {
+        sessionStorage.setItem("userToken", data.access);
+        sessionStorage.setItem("userData", JSON.stringify(data.user));
+        showToast("Welcome back! Signing you in...");
+        setTimeout(() => { onLoginSuccess(); navigate("userprofile"); }, 800);
+      } else {
+        setError(data.error || "Invalid credentials. Please try again.");
+        triggerShake();
+      }
     } catch {
       setError("Cannot connect to server. Please try again.");
       triggerShake();
@@ -52,8 +52,8 @@ export default function UserLogin({ navigate, onLoginSuccess }) {
   };
 
   const handleRegister = async () => {
-    if (!form.username || !form.password || !form.email) {
-      setError("Username, email, and password are required."); triggerShake(); return;
+    if (!form.email || !form.password) {
+      setError("Email and password are required."); triggerShake(); return;
     }
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match."); triggerShake(); return;
@@ -63,39 +63,39 @@ export default function UserLogin({ navigate, onLoginSuccess }) {
     }
     setLoading(true); setError("");
     try {
-    const res = await fetch("http://127.0.0.1:8000/api/v1/user/register/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: form.email,
-        password: form.password,
-        first_name: form.first_name,
-        last_name: form.last_name,
-      }),
-    });
-    const data = await res.json();
-    if (res.ok && data.access) {
-      sessionStorage.setItem("userToken", data.access);
-      sessionStorage.setItem("userData", JSON.stringify(data.user));
-
-      const fullName = [form.first_name, form.last_name].filter(Boolean).join(" ") || "Guest";
-      await fetch("http://127.0.0.1:8000/api/v1/clients/", {
+      const res = await fetch("http://127.0.0.1:8000/api/v1/user/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: fullName,
           email: form.email,
-          phone: "",
+          password: form.password,
+          first_name: form.first_name,
+          last_name: form.last_name,
         }),
       });
+      const data = await res.json();
+      if (res.ok && data.access) {
+        sessionStorage.setItem("userToken", data.access);
+        sessionStorage.setItem("userData", JSON.stringify(data.user));
 
-      showToast("Account created! Redirecting...");
-      setTimeout(() => { onLoginSuccess(); navigate("userprofile"); }, 800);
-    } else {
-      const msgs = Object.values(data).flat();
-      setError(msgs[0] || "Registration failed.");
-      triggerShake();
-    }
+        const fullName = [form.first_name, form.last_name].filter(Boolean).join(" ") || "Guest";
+        await fetch("http://127.0.0.1:8000/api/v1/clients/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: fullName,
+            email: form.email,
+            phone: "",
+          }),
+        });
+
+        showToast("Account created! Redirecting...");
+        setTimeout(() => { onLoginSuccess(); navigate("userprofile"); }, 800);
+      } else {
+        const msgs = Object.values(data).flat();
+        setError(msgs[0] || "Registration failed.");
+        triggerShake();
+      }
     } catch {
       setError("Cannot connect to server. Please try again.");
       triggerShake();
@@ -193,7 +193,7 @@ export default function UserLogin({ navigate, onLoginSuccess }) {
 
         {mode === "login" ? (
           <>
-            {field("username", "USERNAME", "text", "your_username")}
+            {field("email", "EMAIL ADDRESS", "email", "juan@email.com")}
             {field("password", "PASSWORD", "password", "••••••••")}
             <button
               style={{ ...S.primaryBtn, opacity: loading ? 0.7 : 1 }}
@@ -224,7 +224,6 @@ export default function UserLogin({ navigate, onLoginSuccess }) {
                   style={S.input} className="gv-input" />
               </div>
             </div>
-            {field("username", "USERNAME *", "text", "your_username")}
             {field("email", "EMAIL ADDRESS *", "email", "juan@email.com")}
             {field("password", "PASSWORD *", "password", "Min. 8 characters")}
             {field("confirmPassword", "CONFIRM PASSWORD *", "password", "Repeat password")}
